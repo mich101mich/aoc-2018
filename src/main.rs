@@ -11,10 +11,11 @@ fn main() {
         std::iter::repeat(0).take(1000).collect::<Vec<usize>>(),
     ).take(1000)
         .collect();
-    let mut count = 0;
+    let mut no_overlap = HashSet::new();
 
     for line in input.lines() {
-        let line = line.split(" @ ").skip(1).next().unwrap(); // 170,644: 29x14
+        let id = usize::from_str(&line.split(" @ ").next().unwrap()[1..]).unwrap();
+        let line = line.split(" @ ").skip(1).next().unwrap();
         let x = usize::from_str(line.split(",").next().unwrap()).unwrap();
         let line = line.split(",").skip(1).next().unwrap();
         let y = usize::from_str(line.split(": ").next().unwrap()).unwrap();
@@ -27,14 +28,17 @@ fn main() {
             .collect::<Vec<&str>>();
         let width = usize::from_str(size[0]).unwrap();
         let height = usize::from_str(size[1]).unwrap();
+        no_overlap.insert(id);
         for dx in x..(x + width) {
             for dy in y..(y + height) {
-                grid[dx][dy] += 1;
-                if grid[dx][dy] == 2 {
-                    count += 1;
+                if grid[dx][dy] != 0 {
+                    no_overlap.remove(&grid[dx][dy]);
+                    no_overlap.remove(&id);
+                } else {
+                    grid[dx][dy] = id;
                 }
             }
         }
     }
-    println!("{}", count);
+    println!("{:?}", no_overlap);
 }
