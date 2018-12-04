@@ -42,27 +42,20 @@ fn main() {
         }
     }
     let mut max_i = 0;
+    let mut max_j = 0;
     let mut max = 0;
     for (guard, list) in guards.iter() {
-        let count = list.iter().sum();
-        if count > max {
-            max_i = *guard;
-            max = count;
+        for (j, v) in list.iter().enumerate() {
+            if *v > max {
+                max_i = *guard;
+                max_j = j;
+                max = *v;
+            }
         }
     }
-    let guard_id = max_i;
-    let list = &guards[&max_i];
-    max = 0;
-    max_i = 0;
-    for (i, v) in list.iter().enumerate() {
-        if *v > max {
-            max = *v;
-            max_i = i;
-        }
-    }
-    println!("{:?}", guard_id);
+    println!("{:?}", max_j);
     println!("{:?}", max_i);
-    println!("{:?}", max_i * guard_id);
+    println!("{:?}", max_i * max_j);
 }
 
 #[allow(unused)]
