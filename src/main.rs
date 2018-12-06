@@ -26,38 +26,21 @@ fn main() {
         }
     }
 
-    let mut grid = get_grid(-1, h as usize * 5, w as usize * 5);
+    let mut count = 0;
 
-    let mut count = HashMap::new();
-    for i in 0..points.len() {
-        count.insert(i, 0);
-    }
-
-    for y in 0..h * 3 {
-        for x in 0..w * 3 {
-            let mut dists = points
+    for y in 0..h * 5 {
+        for x in 0..w * 5 {
+            let dist: i32 = points
                 .iter()
-                .enumerate()
-                .map(|(i, p)| (i as i32, manhatten(*p, (x - w * 2, y - h * 2))))
-                .collect::<Vec<_>>();
-            dists.sort_by_key(|&(_, d)| d);
-            if dists[0].1 == dists[1].1 {
-                continue;
-            }
-            grid[y as usize][x as usize] = dists[0].0;
-            let best = dists[0].0 as usize;
-            if x == 0 || y == 0 || x == w * 4 - 1 || y == h * 4 - 1 {
-                count.remove(&best);
-            }
-            if count.contains_key(&best) {
-                *count.get_mut(&best).unwrap() += 1;
+                .map(|p| manhatten(*p, (x - w * 2, y - h * 2)))
+                .sum();
+            if dist < 10000 {
+                count += 1;
             }
         }
     }
 
-    let max = *count.values().max().unwrap();
-    println!("{}", max);
-    println!("{:?}", count);
+    println!("{}", count);
 }
 
 fn manhatten(p1: (i32, i32), p2: (i32, i32)) -> i32 {
