@@ -5,54 +5,68 @@ use std::collections::HashSet;
 use std::str::FromStr;
 
 fn main() {
-    let input = include_str!("input/day_5.txt");
+    let input = include_str!("input/day_6.txt");
 
-    let mut min_c = 'a';
-    let mut min = input.len();
+    let mut w = 0;
+    let mut h = 0;
 
-    for c in 0..26 {
-        let c = (c + 97u8) as char;
-        let upper = c.to_uppercase().next().unwrap();
-        let mut input = input
-            .chars()
-            .filter(|i| *i != c && *i != upper)
-            .collect::<Vec<_>>();
-
-        let mut change = true;
-        while change {
-            change = false;
-            let mut i = 0;
-            while i < input.len() - 1 {
-                if input[i].is_lowercase() {
-                    if input[i].to_uppercase().next().unwrap() == input[i + 1] {
-                        input.remove(i);
-                        input.remove(i);
-                        change = true;
-                        i -= 2;
-                    }
-                } else {
-                    if input[i].to_lowercase().next().unwrap() == input[i + 1] {
-                        input.remove(i);
-                        input.remove(i);
-                        change = true;
-                        i -= 2;
-                    }
-                }
-                i += 1;
-            }
+    let points = input
+        .lines()
+        .map(|line| {
+            let mut l = line.split(", ").map(|s| i32::from_str(s).unwrap());
+            (l.next().unwrap(), l.next().unwrap())
+        })
+        .collect::<Vec<_>>();
+    for p in points.iter() {
+        if p.0 > w {
+            w = p.0;
         }
-        println!("{}: {}", c, input.len());
-        if input.len() < min {
-            min = input.len();
-            min_c = c;
+        if p.1 > h {
+            h = p.1;
         }
     }
-    println!("min: {}: {}", min_c, min);
+
+    let mut grid = get_grid(-1, h as usize * 5, w as usize * 5);
+
+    let mut count = HashMap::new();
+    for i in 0..points.len() {
+        count.insert(i, 0);
+    }
+
+    for y in 0..h * 3 {
+        for x in 0..w * 3 {
+            let mut dists = points
+                .iter()
+                .enumerate()
+                .map(|(i, p)| (i as i32, manhatten(*p, (x - w * 2, y - h * 2))))
+                .collect::<Vec<_>>();
+            dists.sort_by_key(|&(_, d)| d);
+            if dists[0].1 == dists[1].1 {
+                continue;
+            }
+            grid[y as usize][x as usize] = dists[0].0;
+            let best = dists[0].0 as usize;
+            if x == 0 || y == 0 || x == w * 4 - 1 || y == h * 4 - 1 {
+                count.remove(&best);
+            }
+            if count.contains_key(&best) {
+                *count.get_mut(&best).unwrap() += 1;
+            }
+        }
+    }
+
+    let max = *count.values().max().unwrap();
+    println!("{}", max);
+    println!("{:?}", count);
+}
+
+fn manhatten(p1: (i32, i32), p2: (i32, i32)) -> i32 {
+    (p1.0 - p2.0).abs() + (p1.1 - p2.1).abs()
 }
 
 #[allow(unused)]
 fn get_grid<T: Clone>(value: T, width: usize, height: usize) -> Vec<Vec<T>> {
-    std::iter::repeat(std::iter::repeat(value).take(width).collect::<Vec<T>>())
-        .take(height)
+    std::iter::repeat(std::iter::repeat(value).take(height).collect::<Vec<T>>())
+        .take(width)
         .collect()
 }
