@@ -28,32 +28,47 @@ fn main() {
 
     let mut letters = letters.into_iter().collect::<Vec<_>>();
     letters.sort();
-    println!("{:?}", letters);
-    'search: while !tree.is_empty() {
+
+    let mut workers = std::iter::repeat((0, 'x')).take(5).collect::<Vec<_>>();
+
+    let mut time = -1;
+    while !tree.is_empty() || workers.iter().map(|w| w.0).sum::<u8>() > 0 {
+        time += 1;
+        for worker in &mut workers {
+            if worker.0 > 0 {
+                worker.0 -= 1;
+                if worker.0 == 0 {
+                    tree.remove(&worker.1);
+                    for list in tree.values_mut() {
+                        list.remove(&worker.1);
+                    }
+                }
+            }
+        }
         for l in letters.clone().iter() {
+            let t = 60 + (*l as u8 - b'A' + 1);
             if let Some(list) = tree.get(l) {
                 if list.is_empty() {
-                    tree.remove(l);
-                    print!("{}", l);
-                    std::io::stdout().flush();
-                    letters.retain(|c| c != l);
-                    for list in tree.values_mut() {
-                        list.remove(l);
+                    for worker in &mut workers {
+                        if worker.0 == 0 {
+                            *worker = (t, *l);
+                            letters.retain(|c| *c != worker.1);
+                            break;
+                        }
                     }
-                    continue 'search;
                 }
             } else {
-                print!("{}", l);
-                std::io::stdout().flush();
-                letters.retain(|c| c != l);
-                for list in tree.values_mut() {
-                    list.remove(l);
+                for worker in &mut workers {
+                    if worker.0 == 0 {
+                        *worker = (t, *l);
+                        letters.retain(|c| *c != worker.1);
+                        break;
+                    }
                 }
-                continue 'search;
             }
         }
     }
-    println!();
+    println!("{}", time);
 }
 
 #[allow(unused)]
