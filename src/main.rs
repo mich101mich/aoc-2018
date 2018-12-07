@@ -2,47 +2,61 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::io::Write;
 use std::str::FromStr;
 
 fn main() {
-    let input = include_str!("input/day_6.txt");
+    let input = include_str!("input/day_7.txt");
 
-    let mut w = 0;
-    let mut h = 0;
+    let mut letters = HashSet::new();
 
-    let points = input
+    let deps = input
         .lines()
         .map(|line| {
-            let mut l = line.split(", ").map(|s| i32::from_str(s).unwrap());
-            (l.next().unwrap(), l.next().unwrap())
+            let mut chars = line.chars();
+            (chars.nth(5).unwrap(), chars.nth(30).unwrap())
         })
         .collect::<Vec<_>>();
-    for p in points.iter() {
-        if p.0 > w {
-            w = p.0;
-        }
-        if p.1 > h {
-            h = p.1;
-        }
+    let mut tree = HashMap::new();
+
+    for (f, s) in deps {
+        letters.insert(f);
+        letters.insert(s);
+        let list = tree.entry(s).or_insert_with(HashSet::new);
+        list.insert(f);
     }
 
-    let mut count = 0;
-
-    for y in 0..h * 5 {
-        for x in 0..w * 5 {
-            let dist: i32 = points
-                .iter()
-                .map(|p| manhatten(*p, (x - w * 2, y - h * 2)))
-                .sum();
-            if dist < 10000 {
-                count += 1;
+    let mut letters = letters.into_iter().collect::<Vec<_>>();
+    letters.sort();
+    println!("{:?}", letters);
+    'search: while !tree.is_empty() {
+        for l in letters.clone().iter() {
+            if let Some(list) = tree.get(l) {
+                if list.is_empty() {
+                    tree.remove(l);
+                    print!("{}", l);
+                    std::io::stdout().flush();
+                    letters.retain(|c| c != l);
+                    for list in tree.values_mut() {
+                        list.remove(l);
+                    }
+                    continue 'search;
+                }
+            } else {
+                print!("{}", l);
+                std::io::stdout().flush();
+                letters.retain(|c| c != l);
+                for list in tree.values_mut() {
+                    list.remove(l);
+                }
+                continue 'search;
             }
         }
     }
-
-    println!("{}", count);
+    println!();
 }
 
+#[allow(unused)]
 fn manhatten(p1: (i32, i32), p2: (i32, i32)) -> i32 {
     (p1.0 - p2.0).abs() + (p1.1 - p2.1).abs()
 }
