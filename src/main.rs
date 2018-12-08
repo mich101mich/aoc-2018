@@ -6,69 +6,31 @@ use std::io::Write;
 use std::str::FromStr;
 
 fn main() {
-    let input = include_str!("input/day_7.txt");
+    let input = include_str!("input/day_8.txt");
 
-    let mut letters = HashSet::new();
-
-    let deps = input
-        .lines()
-        .map(|line| {
-            let mut chars = line.chars();
-            (chars.nth(5).unwrap(), chars.nth(30).unwrap())
-        })
+    let numbers = input
+        .split(' ')
+        .map(|s| usize::from_str(s).unwrap())
         .collect::<Vec<_>>();
-    let mut tree = HashMap::new();
 
-    for (f, s) in deps {
-        letters.insert(f);
-        letters.insert(s);
-        let list = tree.entry(s).or_insert_with(HashSet::new);
-        list.insert(f);
+    let mut sum = 0;
+
+    find_node_end(&numbers, &mut sum);
+    println!("{}", sum);
+}
+
+fn find_node_end(numbers: &[usize], sum: &mut usize) -> usize {
+    let nodes = numbers[0];
+    let meta = numbers[1];
+    let mut cur_index = 2;
+    for _ in 0..nodes {
+        let end = find_node_end(&numbers[cur_index..], sum);
+        cur_index += end;
     }
-
-    let mut letters = letters.into_iter().collect::<Vec<_>>();
-    letters.sort();
-
-    let mut workers = std::iter::repeat((0, 'x')).take(5).collect::<Vec<_>>();
-
-    let mut time = -1;
-    while !tree.is_empty() || workers.iter().map(|w| w.0).sum::<u8>() > 0 {
-        time += 1;
-        for worker in &mut workers {
-            if worker.0 > 0 {
-                worker.0 -= 1;
-                if worker.0 == 0 {
-                    tree.remove(&worker.1);
-                    for list in tree.values_mut() {
-                        list.remove(&worker.1);
-                    }
-                }
-            }
-        }
-        for l in letters.clone().iter() {
-            let t = 60 + (*l as u8 - b'A' + 1);
-            if let Some(list) = tree.get(l) {
-                if list.is_empty() {
-                    for worker in &mut workers {
-                        if worker.0 == 0 {
-                            *worker = (t, *l);
-                            letters.retain(|c| *c != worker.1);
-                            break;
-                        }
-                    }
-                }
-            } else {
-                for worker in &mut workers {
-                    if worker.0 == 0 {
-                        *worker = (t, *l);
-                        letters.retain(|c| *c != worker.1);
-                        break;
-                    }
-                }
-            }
-        }
+    for i in 0..meta {
+        *sum += numbers[cur_index + i];
     }
-    println!("{}", time);
+    cur_index + meta
 }
 
 #[allow(unused)]
