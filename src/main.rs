@@ -13,24 +13,40 @@ fn main() {
         .map(|s| usize::from_str(s).unwrap())
         .collect::<Vec<_>>();
 
-    let mut sum = 0;
+    let mut index = 0;
 
-    find_node_end(&numbers, &mut sum);
-    println!("{}", sum);
+    let value = get_node_value(&numbers, &mut index);
+    println!("{}", value);
 }
 
-fn find_node_end(numbers: &[usize], sum: &mut usize) -> usize {
-    let nodes = numbers[0];
-    let meta = numbers[1];
-    let mut cur_index = 2;
+fn get_node_value(numbers: &[usize], index: &mut usize) -> usize {
+    let nodes = numbers[*index];
+    let meta = numbers[*index + 1];
+    *index += 2;
+
+    if nodes == 0 {
+        let mut sum = 0;
+        for i in 0..meta {
+            sum += numbers[*index + i];
+        }
+        *index += meta;
+        return sum;
+    }
+
+    let mut values = vec![];
     for _ in 0..nodes {
-        let end = find_node_end(&numbers[cur_index..], sum);
-        cur_index += end;
+        let value = get_node_value(numbers, index);
+        values.push(value);
     }
+    let mut sum = 0;
     for i in 0..meta {
-        *sum += numbers[cur_index + i];
+        let data = numbers[*index + i] - 1;
+        if let Some(v) = values.get(data) {
+            sum += v;
+        }
     }
-    cur_index + meta
+    *index += meta;
+    sum
 }
 
 #[allow(unused)]
