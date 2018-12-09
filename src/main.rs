@@ -10,15 +10,22 @@ fn main() {
     //let (players, last) = (9, 25);
 
     let mut scores = std::iter::repeat(0).take(players).collect::<Vec<usize>>();
-    let mut marbles = vec![0, 2, 1];
+    let mut marbles = std::collections::VecDeque::new();
+    marbles.push_back(0);
+    marbles.push_back(2);
+    marbles.push_back(1);
+    //let mut marbles = vec![0, 2, 1];
     let mut current = 1;
     let mut player = 3;
 
-    for i in 3..=last {
+    for i in 3..=(last * 100) {
+        if i % 10000 == 0 {
+            println!("at {}", i);
+        }
         if i % 23 == 0 {
             scores[player] += i;
             let to_remove = (current + marbles.len() - 7) % marbles.len();
-            scores[player] += marbles.remove(to_remove);
+            scores[player] += marbles.remove(to_remove).unwrap();
             current = to_remove % marbles.len();
             player = (player + 1) % players;
             continue;
@@ -26,7 +33,7 @@ fn main() {
 
         let next = (current + 2) % marbles.len();
         if next == 0 {
-            marbles.push(i);
+            marbles.push_back(i);
             current = marbles.len() - 1;
         } else {
             marbles.insert(next, i);
