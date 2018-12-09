@@ -6,47 +6,36 @@ use std::io::Write;
 use std::str::FromStr;
 
 fn main() {
-    let input = include_str!("input/day_8.txt");
+    let (players, last) = include!("input/day_9.txt");
+    //let (players, last) = (9, 25);
 
-    let numbers = input
-        .split(' ')
-        .map(|s| usize::from_str(s).unwrap())
-        .collect::<Vec<_>>();
+    let mut scores = std::iter::repeat(0).take(players).collect::<Vec<usize>>();
+    let mut marbles = vec![0, 2, 1];
+    let mut current = 1;
+    let mut player = 3;
 
-    let mut index = 0;
-
-    let value = get_node_value(&numbers, &mut index);
-    println!("{}", value);
-}
-
-fn get_node_value(numbers: &[usize], index: &mut usize) -> usize {
-    let nodes = numbers[*index];
-    let meta = numbers[*index + 1];
-    *index += 2;
-
-    if nodes == 0 {
-        let mut sum = 0;
-        for i in 0..meta {
-            sum += numbers[*index + i];
+    for i in 3..=last {
+        if i % 23 == 0 {
+            scores[player] += i;
+            let to_remove = (current + marbles.len() - 7) % marbles.len();
+            scores[player] += marbles.remove(to_remove);
+            current = to_remove % marbles.len();
+            player = (player + 1) % players;
+            continue;
         }
-        *index += meta;
-        return sum;
-    }
 
-    let mut values = vec![];
-    for _ in 0..nodes {
-        let value = get_node_value(numbers, index);
-        values.push(value);
-    }
-    let mut sum = 0;
-    for i in 0..meta {
-        let data = numbers[*index + i] - 1;
-        if let Some(v) = values.get(data) {
-            sum += v;
+        let next = (current + 2) % marbles.len();
+        if next == 0 {
+            marbles.push(i);
+            current = marbles.len() - 1;
+        } else {
+            marbles.insert(next, i);
+            current = next;
         }
+
+        player = (player + 1) % players;
     }
-    *index += meta;
-    sum
+    println!("{}", scores.iter().max().unwrap());
 }
 
 #[allow(unused)]
