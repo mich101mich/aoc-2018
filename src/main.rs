@@ -6,43 +6,82 @@ use std::io::Write;
 use std::str::FromStr;
 
 fn main() {
-    let (players, last) = include!("input/day_9.txt");
-    //let (players, last) = (9, 25);
+    let input = include_str!("input/day_10.txt");
 
-    let mut scores = std::iter::repeat(0).take(players).collect::<Vec<usize>>();
-    let mut marbles = std::collections::VecDeque::new();
-    marbles.push_back(0);
-    marbles.push_back(2);
-    marbles.push_back(1);
-    //let mut marbles = vec![0, 2, 1];
-    let mut current = 1;
-    let mut player = 3;
+    let mut points = input
+        .lines()
+        .map(|line| {
+            let x = i32::from_str(&line[10..16].trim()).unwrap();
+            let y = i32::from_str(&line[18..24].trim()).unwrap();
+            let dx = i32::from_str(&line[36..38].trim()).unwrap();
+            let dy = i32::from_str(&line[40..42].trim()).unwrap();
+            ((x, y), (dx, dy))
+        })
+        .collect::<Vec<_>>();
 
-    for i in 3..=(last * 100) {
-        if i % 10000 == 0 {
-            println!("at {}", i);
+    let mut x_dist = 100_000_000;
+    let mut end = 0;
+
+    for i in 0..100_000 {
+        let mut min_x = 10000;
+        let mut max_x = -10000;
+        let mut min_y = 10000;
+        let mut max_y = -10000;
+        for (p, _) in &points {
+            if p.0 > max_x {
+                max_x = p.0;
+            }
+            if p.0 < min_x {
+                min_x = p.0;
+            }
+            if p.1 > max_y {
+                max_y = p.1;
+            }
+            if p.1 < min_y {
+                min_y = p.1;
+            }
         }
-        if i % 23 == 0 {
-            scores[player] += i;
-            let to_remove = (current + marbles.len() - 7) % marbles.len();
-            scores[player] += marbles.remove(to_remove).unwrap();
-            current = to_remove % marbles.len();
-            player = (player + 1) % players;
-            continue;
-        }
+        let mut needed = i >= 10864;
 
-        let next = (current + 2) % marbles.len();
-        if next == 0 {
-            marbles.push_back(i);
-            current = marbles.len() - 1;
+        let dist = max_x - min_x;
+        if dist < x_dist {
+            x_dist = dist;
         } else {
-            marbles.insert(next, i);
-            current = next;
+            println!("{}", i);
+            needed = true;
         }
 
-        player = (player + 1) % players;
+        if needed {
+            println!("{}, {}, {}, {}", min_x, max_x, min_y, max_y);
+            for y in min_y..=max_y {
+                for x in min_x..=max_x {
+                    let mut found = false;
+                    for (p, _) in &points {
+                        if p.0 == x && p.1 == y {
+                            found = true;
+                        }
+                    }
+                    if found {
+                        print!("#");
+                    } else {
+                        print!(".");
+                    }
+                }
+                println!();
+            }
+            println!();
+            println!();
+            end += 1;
+            if end > 5 {
+                return;
+            }
+        }
+
+        for (ref mut p, ref v) in &mut points {
+            p.0 += v.0;
+            p.1 += v.1;
+        }
     }
-    println!("{}", scores.iter().max().unwrap());
 }
 
 #[allow(unused)]
