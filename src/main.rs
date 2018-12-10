@@ -52,6 +52,7 @@ fn main() {
         }
 
         if needed {
+            println!("{}", i);
             println!("{}, {}, {}, {}", min_x, max_x, min_y, max_y);
             for y in min_y..=max_y {
                 for x in min_x..=max_x {
