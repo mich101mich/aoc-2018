@@ -7,38 +7,39 @@ use std::str::FromStr;
 
 fn main() {
     let input: i32 = include!("input/day_11.txt");
+    //let input = 42_i32;
 
     let mut grid = get_grid(0_i32, 300, 300);
 
     for y in 1..=300 {
+        let mut row_sum = 0;
         for x in 1..=300 {
             let rack_id = x + 10;
             let mut pow = rack_id * y + input;
             pow *= rack_id;
             pow = (pow / 100) % 10 - 5;
-            grid[x as usize - 1][y as usize - 1] = pow;
+            let (x, y) = (x as usize - 1, y as usize - 1);
+            row_sum += pow;
+            grid[x][y] = row_sum + if y > 0 { grid[x][y - 1] } else { 0 };
         }
     }
     let mut max = 0;
-    let mut max_xy = (0, 0);
-    for y in 0..(300 - 3) {
-        for x in 0..(300 - 3) {
-            let sum = grid[x][y]
-                + grid[x + 0][y + 1]
-                + grid[x + 0][y + 2]
-                + grid[x + 1][y + 0]
-                + grid[x + 1][y + 1]
-                + grid[x + 1][y + 2]
-                + grid[x + 2][y + 0]
-                + grid[x + 2][y + 1]
-                + grid[x + 2][y + 2];
-            if sum > max {
-                max = sum;
-                max_xy = (x + 1, y + 1);
+    let mut max_xy = (0, 0, 0);
+    for size in 2..=300 {
+        println!("{}", size);
+        for y in size..300 {
+            for x in size..300 {
+                let sum =
+                    grid[x][y] - grid[x - size][y] - grid[x][y - size] + grid[x - size][y - size];
+                if sum > max {
+                    max = sum;
+                    max_xy = (x - size + 2, y - size + 2, size);
+                }
             }
         }
     }
-    println!("{},{}", max_xy.0, max_xy.1);
+    println!("{}", max);
+    println!("{},{},{}", max_xy.0, max_xy.1, max_xy.2);
 }
 
 #[allow(unused)]
