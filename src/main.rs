@@ -6,83 +6,39 @@ use std::io::Write;
 use std::str::FromStr;
 
 fn main() {
-    let input = include_str!("input/day_10.txt");
+    let input: i32 = include!("input/day_11.txt");
 
-    let mut points = input
-        .lines()
-        .map(|line| {
-            let x = i32::from_str(&line[10..16].trim()).unwrap();
-            let y = i32::from_str(&line[18..24].trim()).unwrap();
-            let dx = i32::from_str(&line[36..38].trim()).unwrap();
-            let dy = i32::from_str(&line[40..42].trim()).unwrap();
-            ((x, y), (dx, dy))
-        })
-        .collect::<Vec<_>>();
+    let mut grid = get_grid(0_i32, 300, 300);
 
-    let mut x_dist = 100_000_000;
-    let mut end = 0;
-
-    for i in 0..100_000 {
-        let mut min_x = 10000;
-        let mut max_x = -10000;
-        let mut min_y = 10000;
-        let mut max_y = -10000;
-        for (p, _) in &points {
-            if p.0 > max_x {
-                max_x = p.0;
-            }
-            if p.0 < min_x {
-                min_x = p.0;
-            }
-            if p.1 > max_y {
-                max_y = p.1;
-            }
-            if p.1 < min_y {
-                min_y = p.1;
-            }
-        }
-        let mut needed = i >= 10864;
-
-        let dist = max_x - min_x;
-        if dist < x_dist {
-            x_dist = dist;
-        } else {
-            println!("{}", i);
-            needed = true;
-        }
-
-        if needed {
-            println!("{}", i);
-            println!("{}, {}, {}, {}", min_x, max_x, min_y, max_y);
-            for y in min_y..=max_y {
-                for x in min_x..=max_x {
-                    let mut found = false;
-                    for (p, _) in &points {
-                        if p.0 == x && p.1 == y {
-                            found = true;
-                        }
-                    }
-                    if found {
-                        print!("#");
-                    } else {
-                        print!(".");
-                    }
-                }
-                println!();
-            }
-            println!();
-            println!();
-            end += 1;
-            if end > 5 {
-                return;
-            }
-        }
-
-        for (ref mut p, ref v) in &mut points {
-            p.0 += v.0;
-            p.1 += v.1;
+    for y in 1..=300 {
+        for x in 1..=300 {
+            let rack_id = x + 10;
+            let mut pow = rack_id * y + input;
+            pow *= rack_id;
+            pow = (pow / 100) % 10 - 5;
+            grid[x as usize - 1][y as usize - 1] = pow;
         }
     }
+    let mut max = 0;
+    let mut max_xy = (0, 0);
+    for y in 0..(300 - 3) {
+        for x in 0..(300 - 3) {
+            let sum = grid[x][y]
+                + grid[x + 0][y + 1]
+                + grid[x + 0][y + 2]
+                + grid[x + 1][y + 0]
+                + grid[x + 1][y + 1]
+                + grid[x + 1][y + 2]
+                + grid[x + 2][y + 0]
+                + grid[x + 2][y + 1]
+                + grid[x + 2][y + 2];
+            if sum > max {
+                max = sum;
+                max_xy = (x + 1, y + 1);
+            }
+        }
+    }
+    println!("{},{}", max_xy.0, max_xy.1);
 }
 
 #[allow(unused)]
