@@ -27,7 +27,9 @@ fn main() {
     let mut first: i32 = *pots.keys().min().unwrap();
     let mut last: i32 = *pots.keys().max().unwrap();
 
-    for gen in 0..20 {
+    let mut prev: i32 = pots.keys().sum();
+
+    for gen in 0..2000 {
         let old = pots.clone();
         for p in (first - 4)..(last + 4) {
             let pat: &str = &format!(
@@ -50,12 +52,19 @@ fn main() {
                 pots.remove(&p);
             }
         }
-        if gen % 1_000_000 == 0 {
-            println!("{}", gen);
+        if gen % 100 == 0 {
+            let curr: i32 = pots.keys().sum();
+            println!("{}", curr - prev);
+            prev = curr;
         }
     }
     let cnt: i32 = pots.keys().sum();
     println!("{}", cnt);
+
+    // 2000 => 158467
+    // alle 100: + 7800
+    // (50000000000 - 2000) / 100 * 7800
+    // => 3899999844000
 }
 
 #[allow(unused)]
