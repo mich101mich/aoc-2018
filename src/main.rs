@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use std::io::Write;
 use std::str::FromStr;
 
+#[derive(Debug)]
 enum Dir {
     Up,
     Right,
@@ -49,13 +50,11 @@ fn main() {
         }
     }
 
-    let mut count = 0;
     loop {
-        count += 1;
-
         carts.sort_by_key(|cart| cart.0 + cart.1 * h);
 
-        for i in 0..carts.len() {
+        let mut i = 0;
+        while i < carts.len() {
             {
                 let cart = &mut carts[i];
                 match cart.2 {
@@ -79,10 +78,19 @@ fn main() {
             }
             for j in 0..carts.len() {
                 if i != j && carts[i].0 == carts[j].0 && carts[i].1 == carts[j].1 {
-                    println!("{},{}", carts[i].0, carts[i].1);
-                    return;
+                    println!("crash at {},{}", carts[i].0, carts[i].1);
+                    carts.remove(i);
+                    let j = if j > i { j - 1 } else { j };
+                    carts.remove(j);
+                    i = if i > j { i - 2 } else { i - 1 };
+                    break;
                 }
             }
+            i += 1;
+        }
+        if carts.len() == 1 {
+            println!("final {},{}", carts[0].0, carts[0].1);
+            return;
         }
     }
 }
