@@ -1,167 +1,34 @@
 #![allow(unused_imports)]
 
+use crate::Dir::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Write;
 use std::str::FromStr;
 
-#[derive(Debug)]
-enum Dir {
-    Up,
-    Right,
-    Down,
-    Left,
-}
-use crate::Dir::*;
-
 fn main() {
-    let input = include_str!("input/day_13.txt");
+    let input = include!("input/day_14.txt");
 
-    let mut grid = input
-        .lines()
-        .map(|line| line.chars().collect::<Vec<_>>())
-        .collect::<Vec<_>>();
-    let mut carts = vec![];
+    let mut recipies = vec![3, 7];
+    let mut e1 = 0;
+    let mut e2 = 1;
 
-    let h = grid.len();
-    let w = grid[0].len();
-
-    for y in 0..h {
-        for x in 0..w {
-            match grid[y][x] {
-                '>' => {
-                    carts.push((x, y, Right, 0));
-                    grid[y][x] = '-';
-                }
-                '<' => {
-                    carts.push((x, y, Left, 0));
-                    grid[y][x] = '-';
-                }
-                '^' => {
-                    carts.push((x, y, Up, 0));
-                    grid[y][x] = '|';
-                }
-                'v' => {
-                    carts.push((x, y, Down, 0));
-                    grid[y][x] = '|';
-                }
-                _ => {}
-            }
+    while recipies.len() < input + 10 {
+        let sum = recipies[e1] + recipies[e2];
+        if sum >= 10 {
+            recipies.push(sum / 10);
+            recipies.push(sum % 10);
+        } else {
+            recipies.push(sum);
         }
+        e1 = (e1 + recipies[e1] + 1) % recipies.len();
+        e2 = (e2 + recipies[e2] + 1) % recipies.len();
+        //println!("{:?}", recipies);
     }
-
-    loop {
-        carts.sort_by_key(|cart| cart.0 + cart.1 * h);
-
-        let mut i = 0;
-        while i < carts.len() {
-            {
-                let cart = &mut carts[i];
-                match cart.2 {
-                    Right => {
-                        cart.0 += 1;
-                        cart.2 = next_dir(grid[cart.1][cart.0], &Right, &mut cart.3);
-                    }
-                    Left => {
-                        cart.0 -= 1;
-                        cart.2 = next_dir(grid[cart.1][cart.0], &Left, &mut cart.3);
-                    }
-                    Up => {
-                        cart.1 -= 1;
-                        cart.2 = next_dir(grid[cart.1][cart.0], &Up, &mut cart.3);
-                    }
-                    Down => {
-                        cart.1 += 1;
-                        cart.2 = next_dir(grid[cart.1][cart.0], &Down, &mut cart.3);
-                    }
-                }
-            }
-            for j in 0..carts.len() {
-                if i != j && carts[i].0 == carts[j].0 && carts[i].1 == carts[j].1 {
-                    println!("crash at {},{}", carts[i].0, carts[i].1);
-                    carts.remove(i);
-                    let j = if j > i { j - 1 } else { j };
-                    carts.remove(j);
-                    i = if i > j { i - 2 } else { i - 1 };
-                    break;
-                }
-            }
-            i += 1;
-        }
-        if carts.len() == 1 {
-            println!("final {},{}", carts[0].0, carts[0].1);
-            return;
-        }
+    for n in &recipies[input..input + 10] {
+        print!("{}", n);
     }
-}
-
-fn next_dir(c: char, current: &Dir, intersect: &mut usize) -> Dir {
-    match current {
-        Right => match c {
-            '/' => Up,
-            '\\' => Down,
-            '+' => {
-                let d;
-                match intersect {
-                    0 => d = Up,
-                    1 => d = Right,
-                    _ => d = Down,
-                }
-                *intersect = (*intersect + 1) % 3;
-                d
-            }
-            '-' => Right,
-            _ => panic!("invalid char on track"),
-        },
-        Left => match c {
-            '/' => Down,
-            '\\' => Up,
-            '+' => {
-                let d;
-                match intersect {
-                    0 => d = Down,
-                    1 => d = Left,
-                    _ => d = Up,
-                }
-                *intersect = (*intersect + 1) % 3;
-                d
-            }
-            '-' => Left,
-            _ => panic!("invalid char on track"),
-        },
-        Up => match c {
-            '/' => Right,
-            '\\' => Left,
-            '+' => {
-                let d;
-                match intersect {
-                    0 => d = Left,
-                    1 => d = Up,
-                    _ => d = Right,
-                }
-                *intersect = (*intersect + 1) % 3;
-                d
-            }
-            '|' => Up,
-            _ => panic!("invalid char on track"),
-        },
-        Down => match c {
-            '/' => Left,
-            '\\' => Right,
-            '+' => {
-                let d;
-                match intersect {
-                    0 => d = Right,
-                    1 => d = Down,
-                    _ => d = Left,
-                }
-                *intersect = (*intersect + 1) % 3;
-                d
-            }
-            '|' => Down,
-            _ => panic!("invalid char on track"),
-        },
-    }
+    println!();
 }
 
 #[allow(unused)]
@@ -174,4 +41,13 @@ fn get_grid<T: Clone>(value: T, width: usize, height: usize) -> Vec<Vec<T>> {
     std::iter::repeat(std::iter::repeat(value).take(height).collect::<Vec<T>>())
         .take(width)
         .collect()
+}
+
+#[allow(unused)]
+#[derive(Debug)]
+enum Dir {
+    Up,
+    Right,
+    Down,
+    Left,
 }
