@@ -9,11 +9,21 @@ use std::str::FromStr;
 fn main() {
     let input = include!("input/day_14.txt");
 
+    let digits = {
+        let mut d = vec![];
+        let mut input = input;
+        while input > 0 {
+            d.insert(0, input % 10);
+            input /= 10;
+        }
+        d
+    };
+
     let mut recipies = vec![3, 7];
     let mut e1 = 0;
     let mut e2 = 1;
 
-    while recipies.len() < input + 10 {
+    loop {
         let sum = recipies[e1] + recipies[e2];
         if sum >= 10 {
             recipies.push(sum / 10);
@@ -24,11 +34,34 @@ fn main() {
         e1 = (e1 + recipies[e1] + 1) % recipies.len();
         e2 = (e2 + recipies[e2] + 1) % recipies.len();
         //println!("{:?}", recipies);
+
+        if recipies.len() < digits.len() + 1 {
+            continue;
+        }
+
+        let mut found = true;
+        for i in 0..digits.len() {
+            if recipies[recipies.len() - digits.len() + i] != digits[i] {
+                found = false;
+                break;
+            }
+        }
+        if found {
+            println!("{}", recipies.len() - digits.len());
+            return;
+        }
+        found = true;
+        for i in 0..digits.len() {
+            if recipies[recipies.len() - 1 - digits.len() + i] != digits[i] {
+                found = false;
+                break;
+            }
+        }
+        if found {
+            println!("{}", recipies.len() - 1 - digits.len());
+            return;
+        }
     }
-    for n in &recipies[input..input + 10] {
-        print!("{}", n);
-    }
-    println!();
 }
 
 #[allow(unused)]
