@@ -1,4 +1,5 @@
 #![allow(unused_imports)]
+#![allow(clippy::cyclomatic_complexity)]
 
 use crate::Dir::*;
 use std::collections::HashMap;
@@ -6,67 +7,188 @@ use std::collections::HashSet;
 use std::io::Write;
 use std::str::FromStr;
 
-fn main() {
-    let input = include!("input/day_14.txt");
+mod utils;
+use crate::utils::*;
 
-    let digits = {
-        let mut d = vec![];
-        let mut input = input;
-        while input > 0 {
-            d.insert(0, input % 10);
-            input /= 10;
-        }
-        d
-    };
-
-    let mut recipies = vec![3, 7];
-    let mut e1 = 0;
-    let mut e2 = 1;
-
-    loop {
-        let sum = recipies[e1] + recipies[e2];
-        if sum >= 10 {
-            recipies.push(sum / 10);
-            recipies.push(sum % 10);
-        } else {
-            recipies.push(sum);
-        }
-        e1 = (e1 + recipies[e1] + 1) % recipies.len();
-        e2 = (e2 + recipies[e2] + 1) % recipies.len();
-        //println!("{:?}", recipies);
-
-        if recipies.len() < digits.len() + 1 {
-            continue;
-        }
-
-        let mut found = true;
-        for i in 0..digits.len() {
-            if recipies[recipies.len() - digits.len() + i] != digits[i] {
-                found = false;
-                break;
-            }
-        }
-        if found {
-            println!("{}", recipies.len() - digits.len());
-            return;
-        }
-        found = true;
-        for i in 0..digits.len() {
-            if recipies[recipies.len() - 1 - digits.len() + i] != digits[i] {
-                found = false;
-                break;
-            }
-        }
-        if found {
-            println!("{}", recipies.len() - 1 - digits.len());
-            return;
-        }
+fn opposite(c: char) -> char {
+    if c == 'G' {
+        'E'
+    } else {
+        'G'
     }
 }
 
+fn main() {
+    let input = include_str!("input/day_15.txt");
+
+    let mut grid = input
+        .lines()
+        .map(|line| line.chars().collect::<Vec<_>>())
+        .collect::<Vec<_>>();
+
+    let width = grid[0].len();
+    let height = grid.len();
+
+    let mut goblins = vec![];
+    let mut elves = vec![];
+    for y in 0..height {
+        for x in 0..width {
+            if grid[y][x] == 'G' {
+                goblins.push((x, y, 200));
+            } else if grid[y][x] == 'E' {
+                elves.push((x, y, 200));
+            }
+        }
+    }
+
+    'game: for round in 0..1000 {
+        for y in 0..height {
+            for x in 0..width {
+                print!("{}", grid[y][x]);
+            }
+            println!();
+        }
+        //println!("{:?}", elves);
+        //println!("{:?}", goblins);
+        let mut old_grid = grid.clone();
+        for y in 0..height {
+            for x in 0..width {
+                if (old_grid[y][x] != 'E' && old_grid[y][x] != 'G') || grid[y][x] != old_grid[y][x]
+                {
+                    continue;
+                }
+                let me = grid[y][x];
+                let mut pos = (x, y);
+                let mut targets = neighbours((x, y), width, height)
+                    .filter(|p| grid[p.1][p.0] == opposite(me))
+                    .map(|p| {
+                        *if me == 'E' { &goblins } else { &elves }
+                            .iter()
+                            .find(|o| o.0 == p.0 && o.1 == p.1)
+                            .expect("nice")
+                    })
+                    .collect::<Vec<_>>();
+
+                if targets.is_empty() {
+                    if goblins.is_empty() || elves.is_empty() {
+                        println!("{}", round);
+                        break 'game;
+                    }
+
+                    let destinations = dijkstra_search(
+                        |p| neighbours(p, width, height),
+                        |_, _| 1,
+                        |p| grid[p.1][p.0] == '.',
+                        (x, y),
+                        &if me == 'E' { &goblins } else { &elves }
+                            .iter()
+                            .map(|&(x, y, _)| (x, y))
+                            .collect::<Vec<_>>(),
+                    );
+                    if destinations.is_empty() {
+                        continue;
+                    }
+                    let mut destinations = destinations.into_iter().collect::<Vec<_>>();
+                    destinations.sort_by_key(|(_, path)| path.cost);
+                    let min_dist = destinations[0].1.cost;
+                    destinations.retain(|(_, path)| path.cost == min_dist);
+                    destinations.sort_by_key(|(_, path)| path[1].0 + path[1].1 * width);
+                    let next = destinations[0].1.path[1];
+                    grid[next.1][next.0] = grid[y][x];
+                    grid[y][x] = '.';
+                    if me == 'E' {
+                        let hp = elves.iter().find(|p| p.0 == x && p.1 == y).unwrap().2;
+                        elves.retain(|p| *p != (x, y, hp));
+                        elves.push((next.0, next.1, hp));
+                    } else {
+                        let hp = goblins.iter().find(|p| p.0 == x && p.1 == y).unwrap().2;
+                        goblins.retain(|p| *p != (x, y, hp));
+                        goblins.push((next.0, next.1, hp));
+                    }
+                    pos = next;
+                }
+
+                targets = neighbours(pos, width, height)
+                    .filter(|p| grid[p.1][p.0] == opposite(me))
+                    .map(|p| {
+                        *if me == 'E' { &goblins } else { &elves }
+                            .iter()
+                            .find(|o| o.0 == p.0 && o.1 == p.1)
+                            .expect("nice")
+                    })
+                    .collect::<Vec<_>>();
+
+                if targets.is_empty() {
+                    continue;
+                }
+                targets.sort_by_key(|p| p.2);
+                let target = targets[0];
+                //print!("{} at {:?}: attacking {:?} -> ", me, pos, target);
+                if target.2 < 3 {
+                    grid[target.1][target.0] = '.';
+                    old_grid[target.1][target.0] = '.';
+                    if me == 'E' { &mut goblins } else { &mut elves }.retain(|p| *p != target);
+                } else {
+                    let other = if me == 'E' { &mut goblins } else { &mut elves };
+                    let mut found = false;
+                    for o in other {
+                        if *o == target {
+                            o.2 -= 3;
+                            //println!("{:?}", *o);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if !found {
+                        panic!();
+                    }
+                }
+            }
+        }
+    }
+    if elves.is_empty() {
+        // 240030, 239760, 237363, 237096, 236829
+        let mut result = 0;
+        for g in goblins {
+            result += g.2;
+        }
+        println!("{}", result);
+        return;
+    }
+    if goblins.is_empty() {
+        let mut result = 0;
+        for e in elves {
+            result += e.2;
+        }
+        println!("{}", result);
+        return;
+    }
+}
+
+fn neighbours(
+    (x, y): (usize, usize),
+    width: usize,
+    height: usize,
+) -> impl Iterator<Item = (usize, usize)> {
+    let mut n = vec![];
+    if y > 0 {
+        n.push((x, y - 1));
+    }
+    if x > 0 {
+        n.push((x - 1, y));
+    }
+    if x < width - 1 {
+        n.push((x + 1, y));
+    }
+    if y < height - 1 {
+        n.push((x, y + 1));
+    }
+    n.into_iter()
+}
+
 #[allow(unused)]
-fn manhatten(p1: (i32, i32), p2: (i32, i32)) -> i32 {
-    (p1.0 - p2.0).abs() + (p1.1 - p2.1).abs()
+fn manhatten(p1: (usize, usize), p2: (usize, usize)) -> usize {
+    ((p1.0 as i32 - p2.0 as i32).abs() + (p1.1 as i32 - p2.1 as i32).abs()) as usize
 }
 
 #[allow(unused)]
