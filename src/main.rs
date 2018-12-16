@@ -10,170 +10,166 @@ use std::str::FromStr;
 mod utils;
 use crate::utils::*;
 
-fn opposite(c: char) -> char {
-    if c == 'G' {
-        'E'
-    } else {
-        'G'
-    }
+struct Instruction {
+    before: Vec<usize>,
+    after: Vec<usize>,
+    op: usize,
+    l: usize,
+    r: usize,
+    out: usize,
 }
 
 fn main() {
-    let input = include_str!("input/day_15.txt");
+    let input = include_str!("input/day_16.txt");
 
-    let mut goblins = vec![];
-    let mut elves = vec![];
+    let lines = input.lines().take(3260).collect::<Vec<_>>();
+    let instructions = lines
+        .chunks(4)
+        .map(|inst| {
+            let before = inst[0][9..19]
+                .split(", ")
+                .map(|i| usize::from_str(i).unwrap())
+                .collect::<Vec<_>>();
+            let after = inst[2][9..19]
+                .split(", ")
+                .map(|i| usize::from_str(i).unwrap())
+                .collect::<Vec<_>>();
+            let op = inst[1]
+                .split(' ')
+                .map(|i| usize::from_str(i).unwrap())
+                .collect::<Vec<_>>();
 
-    'all: for attack in 4..50 {
-        let mut grid = input
-            .lines()
-            .map(|line| line.chars().collect::<Vec<_>>())
-            .collect::<Vec<_>>();
+            Instruction {
+                before,
+                after,
+                op: op[0],
+                l: op[1],
+                r: op[2],
+                out: op[3],
+            }
+        })
+        .collect::<Vec<_>>();
 
-        let width = grid[0].len();
-        let height = grid.len();
+    let opcodes = [
+        "addr", "addi", "mulr", "muli", "banr", "bani", "borr", "bori", "setr", "seti", "gtir",
+        "gtri", "gtrr", "eqir", "eqri", "eqrr",
+    ];
 
-        goblins = vec![];
-        elves = vec![];
-        for y in 0..height {
-            for x in 0..width {
-                if grid[y][x] == 'G' {
-                    goblins.push((x, y, 200));
-                } else if grid[y][x] == 'E' {
-                    elves.push((x, y, 200));
+    let mut possible = get_grid(true, 16, 16);
+
+    let mut count = 0;
+
+    for instr in instructions {
+        let mut avail = 0;
+        for (i, o) in opcodes.iter().enumerate() {
+            match *o {
+                "addr" => {
+                    let res = instr.before[instr.l] + instr.before[instr.r];
+                    if res == instr.after[instr.out] {
+                        avail += 1;
+                    }
                 }
+                "addi" => {
+                    let res = instr.before[instr.l] + instr.r;
+                    if res == instr.after[instr.out] {
+                        avail += 1;
+                    }
+                }
+                "mulr" => {
+                    let res = instr.before[instr.l] * instr.before[instr.r];
+                    if res == instr.after[instr.out] {
+                        avail += 1;
+                    }
+                }
+                "muli" => {
+                    let res = instr.before[instr.l] * instr.r;
+                    if res == instr.after[instr.out] {
+                        avail += 1;
+                    }
+                }
+                "banr" => {
+                    let res = instr.before[instr.l] & instr.before[instr.r];
+                    if res == instr.after[instr.out] {
+                        avail += 1;
+                    }
+                }
+                "bani" => {
+                    let res = instr.before[instr.l] & instr.r;
+                    if res == instr.after[instr.out] {
+                        avail += 1;
+                    }
+                }
+                "borr" => {
+                    let res = instr.before[instr.l] | instr.before[instr.r];
+                    if res == instr.after[instr.out] {
+                        avail += 1;
+                    }
+                }
+                "bori" => {
+                    let res = instr.before[instr.l] | instr.r;
+                    if res == instr.after[instr.out] {
+                        avail += 1;
+                    }
+                }
+                "setr" => {
+                    let res = instr.before[instr.l];
+                    if res == instr.after[instr.out] {
+                        avail += 1;
+                    }
+                }
+                "seti" => {
+                    let res = instr.l;
+                    if res == instr.after[instr.out] {
+                        avail += 1;
+                    }
+                }
+                "gtir" => {
+                    let res = instr.l > instr.before[instr.r];
+                    if res == (instr.after[instr.out] == 1) {
+                        avail += 1;
+                    }
+                }
+                "gtri" => {
+                    let res = instr.before[instr.l] > instr.r;
+                    if res == (instr.after[instr.out] == 1) {
+                        avail += 1;
+                    }
+                }
+                "gtrr" => {
+                    let res = instr.before[instr.l] > instr.before[instr.r];
+                    if res == (instr.after[instr.out] == 1) {
+                        avail += 1;
+                    }
+                }
+                "eqir" => {
+                    let res = instr.l == instr.before[instr.r];
+                    if res == (instr.after[instr.out] == 1) {
+                        avail += 1;
+                    }
+                }
+                "eqri" => {
+                    let res = instr.before[instr.l] == instr.r;
+                    if res == (instr.after[instr.out] == 1) {
+                        avail += 1;
+                    }
+                }
+                "eqrr" => {
+                    let res = instr.before[instr.l] == instr.before[instr.r];
+                    if res == (instr.after[instr.out] == 1) {
+                        avail += 1;
+                    }
+                }
+                _ => panic!("no op"),
             }
         }
-
-        'game: for round in 0..1000 {
-            /*for y in 0..height {
-                for x in 0..width {
-                    print!("{}", grid[y][x]);
-                }
-                println!();
-            }*/
-            //println!("{:?}", elves);
-            //println!("{:?}", goblins);
-            let mut old_grid = grid.clone();
-            for y in 0..height {
-                for x in 0..width {
-                    if (old_grid[y][x] != 'E' && old_grid[y][x] != 'G')
-                        || grid[y][x] != old_grid[y][x]
-                    {
-                        continue;
-                    }
-                    let me = grid[y][x];
-                    let mut pos = (x, y);
-                    let mut targets = neighbours((x, y), width, height)
-                        .filter(|p| grid[p.1][p.0] == opposite(me))
-                        .map(|p| {
-                            *if me == 'E' { &goblins } else { &elves }
-                                .iter()
-                                .find(|o| o.0 == p.0 && o.1 == p.1)
-                                .expect("nice")
-                        })
-                        .collect::<Vec<_>>();
-
-                    if targets.is_empty() {
-                        if goblins.is_empty() {
-                            println!("{}", round);
-                            break 'all;
-                        }
-
-                        let destinations = dijkstra_search(
-                            |p| neighbours(p, width, height),
-                            |_, _| 1,
-                            |p| grid[p.1][p.0] == '.',
-                            (x, y),
-                            &if me == 'E' { &goblins } else { &elves }
-                                .iter()
-                                .map(|&(x, y, _)| (x, y))
-                                .collect::<Vec<_>>(),
-                        );
-                        if destinations.is_empty() {
-                            continue;
-                        }
-                        let mut destinations = destinations.into_iter().collect::<Vec<_>>();
-                        destinations.sort_by_key(|(_, path)| path.cost);
-                        let min_dist = destinations[0].1.cost;
-                        destinations.retain(|(_, path)| path.cost == min_dist);
-                        destinations.sort_by_key(|(_, path)| path[1].0 + path[1].1 * width);
-                        let next = destinations[0].1.path[1];
-                        grid[next.1][next.0] = grid[y][x];
-                        grid[y][x] = '.';
-                        if me == 'E' {
-                            let hp = elves.iter().find(|p| p.0 == x && p.1 == y).unwrap().2;
-                            elves.retain(|p| *p != (x, y, hp));
-                            elves.push((next.0, next.1, hp));
-                        } else {
-                            let hp = goblins.iter().find(|p| p.0 == x && p.1 == y).unwrap().2;
-                            goblins.retain(|p| *p != (x, y, hp));
-                            goblins.push((next.0, next.1, hp));
-                        }
-                        pos = next;
-                    }
-
-                    targets = neighbours(pos, width, height)
-                        .filter(|p| grid[p.1][p.0] == opposite(me))
-                        .map(|p| {
-                            *if me == 'E' { &goblins } else { &elves }
-                                .iter()
-                                .find(|o| o.0 == p.0 && o.1 == p.1)
-                                .expect("nice")
-                        })
-                        .collect::<Vec<_>>();
-
-                    if targets.is_empty() {
-                        continue;
-                    }
-                    targets.sort_by_key(|p| p.2);
-                    let target = targets[0];
-                    let power = if me == 'E' { attack } else { 3 };
-                    if target.2 < power {
-                        grid[target.1][target.0] = '.';
-                        old_grid[target.1][target.0] = '.';
-                        if me == 'G' {
-                            break 'game;
-                        }
-                        goblins.retain(|p| *p != target);
-                    } else {
-                        let other = if me == 'E' { &mut goblins } else { &mut elves };
-                        let mut found = false;
-                        for o in other {
-                            if *o == target {
-                                o.2 -= power;
-                                //println!("{:?}", *o);
-                                found = true;
-                                break;
-                            }
-                        }
-                        if !found {
-                            panic!();
-                        }
-                    }
-                }
-            }
+        if avail >= 3 {
+            count += 1;
         }
     }
-    if elves.is_empty() {
-        // 240030, 239760, 237363, 237096, 236829
-        let mut result = 0;
-        for g in goblins {
-            result += g.2;
-        }
-        println!("{}", result);
-        return;
-    }
-    if goblins.is_empty() {
-        let mut result = 0;
-        for e in elves {
-            result += e.2;
-        }
-        println!("{}", result);
-        return;
-    }
+    println!("{}", count);
 }
 
+#[allow(unused)]
 fn neighbours(
     (x, y): (usize, usize),
     width: usize,
