@@ -10,163 +10,115 @@ use std::str::FromStr;
 mod utils;
 use crate::utils::*;
 
-struct Instruction {
-    before: Vec<usize>,
-    after: Vec<usize>,
-    op: usize,
-    l: usize,
-    r: usize,
-    out: usize,
-}
-
 fn main() {
     let input = include_str!("input/day_16.txt");
 
-    let lines = input.lines().take(3260).collect::<Vec<_>>();
-    let instructions = lines
-        .chunks(4)
+    let instructions = input
+        .lines()
+        .skip(3262)
         .map(|inst| {
-            let before = inst[0][9..19]
-                .split(", ")
-                .map(|i| usize::from_str(i).unwrap())
-                .collect::<Vec<_>>();
-            let after = inst[2][9..19]
-                .split(", ")
-                .map(|i| usize::from_str(i).unwrap())
-                .collect::<Vec<_>>();
-            let op = inst[1]
+            let op = inst
                 .split(' ')
                 .map(|i| usize::from_str(i).unwrap())
                 .collect::<Vec<_>>();
-
-            Instruction {
-                before,
-                after,
-                op: op[0],
-                l: op[1],
-                r: op[2],
-                out: op[3],
-            }
+            (op[0], op[1], op[2], op[3])
         })
         .collect::<Vec<_>>();
 
-    let opcodes = [
-        "addr", "addi", "mulr", "muli", "banr", "bani", "borr", "bori", "setr", "seti", "gtir",
-        "gtri", "gtrr", "eqir", "eqri", "eqrr",
-    ];
+    let mapping: HashMap<usize, &str> = [
+        (0_usize, "mulr"),
+        (1, "addr"),
+        (2, "banr"),
+        (3, "eqir"),
+        (4, "muli"),
+        (5, "setr"),
+        (6, "eqri"),
+        (7, "gtri"),
+        (8, "eqrr"),
+        (9, "addi"),
+        (10, "gtir"),
+        (11, "gtrr"),
+        (12, "borr"),
+        (13, "bani"),
+        (14, "seti"),
+        (15, "bori"),
+    ]
+    .into_iter()
+    .cloned()
+    .collect();
 
-    let mut possible = get_grid(true, 16, 16);
-
-    let mut count = 0;
+    let mut registers = [0; 4];
 
     for instr in instructions {
-        let mut avail = 0;
-        for (i, o) in opcodes.iter().enumerate() {
-            match *o {
-                "addr" => {
-                    let res = instr.before[instr.l] + instr.before[instr.r];
-                    if res == instr.after[instr.out] {
-                        avail += 1;
-                    }
-                }
-                "addi" => {
-                    let res = instr.before[instr.l] + instr.r;
-                    if res == instr.after[instr.out] {
-                        avail += 1;
-                    }
-                }
-                "mulr" => {
-                    let res = instr.before[instr.l] * instr.before[instr.r];
-                    if res == instr.after[instr.out] {
-                        avail += 1;
-                    }
-                }
-                "muli" => {
-                    let res = instr.before[instr.l] * instr.r;
-                    if res == instr.after[instr.out] {
-                        avail += 1;
-                    }
-                }
-                "banr" => {
-                    let res = instr.before[instr.l] & instr.before[instr.r];
-                    if res == instr.after[instr.out] {
-                        avail += 1;
-                    }
-                }
-                "bani" => {
-                    let res = instr.before[instr.l] & instr.r;
-                    if res == instr.after[instr.out] {
-                        avail += 1;
-                    }
-                }
-                "borr" => {
-                    let res = instr.before[instr.l] | instr.before[instr.r];
-                    if res == instr.after[instr.out] {
-                        avail += 1;
-                    }
-                }
-                "bori" => {
-                    let res = instr.before[instr.l] | instr.r;
-                    if res == instr.after[instr.out] {
-                        avail += 1;
-                    }
-                }
-                "setr" => {
-                    let res = instr.before[instr.l];
-                    if res == instr.after[instr.out] {
-                        avail += 1;
-                    }
-                }
-                "seti" => {
-                    let res = instr.l;
-                    if res == instr.after[instr.out] {
-                        avail += 1;
-                    }
-                }
-                "gtir" => {
-                    let res = instr.l > instr.before[instr.r];
-                    if res == (instr.after[instr.out] == 1) {
-                        avail += 1;
-                    }
-                }
-                "gtri" => {
-                    let res = instr.before[instr.l] > instr.r;
-                    if res == (instr.after[instr.out] == 1) {
-                        avail += 1;
-                    }
-                }
-                "gtrr" => {
-                    let res = instr.before[instr.l] > instr.before[instr.r];
-                    if res == (instr.after[instr.out] == 1) {
-                        avail += 1;
-                    }
-                }
-                "eqir" => {
-                    let res = instr.l == instr.before[instr.r];
-                    if res == (instr.after[instr.out] == 1) {
-                        avail += 1;
-                    }
-                }
-                "eqri" => {
-                    let res = instr.before[instr.l] == instr.r;
-                    if res == (instr.after[instr.out] == 1) {
-                        avail += 1;
-                    }
-                }
-                "eqrr" => {
-                    let res = instr.before[instr.l] == instr.before[instr.r];
-                    if res == (instr.after[instr.out] == 1) {
-                        avail += 1;
-                    }
-                }
-                _ => panic!("no op"),
+        match mapping[&instr.0] {
+            "addr" => {
+                let res = registers[instr.1] + registers[instr.2];
+                registers[instr.3] = res;
             }
-        }
-        if avail >= 3 {
-            count += 1;
+            "addi" => {
+                let res = registers[instr.1] + instr.2;
+                registers[instr.3] = res;
+            }
+            "mulr" => {
+                let res = registers[instr.1] * registers[instr.2];
+                registers[instr.3] = res;
+            }
+            "muli" => {
+                let res = registers[instr.1] * instr.2;
+                registers[instr.3] = res;
+            }
+            "banr" => {
+                let res = registers[instr.1] & registers[instr.2];
+                registers[instr.3] = res;
+            }
+            "bani" => {
+                let res = registers[instr.1] & instr.2;
+                registers[instr.3] = res;
+            }
+            "borr" => {
+                let res = registers[instr.1] | registers[instr.2];
+                registers[instr.3] = res;
+            }
+            "bori" => {
+                let res = registers[instr.1] | instr.2;
+                registers[instr.3] = res;
+            }
+            "setr" => {
+                let res = registers[instr.1];
+                registers[instr.3] = res;
+            }
+            "seti" => {
+                let res = instr.1;
+                registers[instr.3] = res;
+            }
+            "gtir" => {
+                let res = instr.1 > registers[instr.2];
+                registers[instr.3] = res as usize;
+            }
+            "gtri" => {
+                let res = registers[instr.1] > instr.2;
+                registers[instr.3] = res as usize;
+            }
+            "gtrr" => {
+                let res = registers[instr.1] > registers[instr.2];
+                registers[instr.3] = res as usize;
+            }
+            "eqir" => {
+                let res = instr.1 == registers[instr.2];
+                registers[instr.3] = res as usize;
+            }
+            "eqri" => {
+                let res = registers[instr.1] == instr.2;
+                registers[instr.3] = res as usize;
+            }
+            "eqrr" => {
+                let res = registers[instr.1] == registers[instr.2];
+                registers[instr.3] = res as usize;
+            }
+            _ => panic!("no op"),
         }
     }
-    println!("{}", count);
+    println!("{}", registers[0]);
 }
 
 #[allow(unused)]
