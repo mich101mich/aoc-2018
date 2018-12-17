@@ -2,6 +2,45 @@
 
 use std::collections::HashMap;
 
+pub fn neighbours(
+	(x, y): (usize, usize),
+	width: usize,
+	height: usize,
+) -> impl Iterator<Item = (usize, usize)> {
+	let mut n = vec![];
+	if y > 0 {
+		n.push((x, y - 1));
+	}
+	if x > 0 {
+		n.push((x - 1, y));
+	}
+	if x < width - 1 {
+		n.push((x + 1, y));
+	}
+	if y < height - 1 {
+		n.push((x, y + 1));
+	}
+	n.into_iter()
+}
+
+pub fn manhatten(p1: (usize, usize), p2: (usize, usize)) -> usize {
+	((p1.0 as i32 - p2.0 as i32).abs() + (p1.1 as i32 - p2.1 as i32).abs()) as usize
+}
+
+pub fn get_grid<T: Clone>(value: T, width: usize, height: usize) -> Vec<Vec<T>> {
+	std::iter::repeat(std::iter::repeat(value).take(height).collect::<Vec<T>>())
+		.take(width)
+		.collect()
+}
+
+#[derive(Debug)]
+pub enum Dir {
+	Up,
+	Right,
+	Down,
+	Left,
+}
+
 pub type Cost = usize;
 
 #[derive(Debug, Clone)]
