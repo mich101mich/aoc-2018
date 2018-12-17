@@ -158,12 +158,10 @@ fn main() {
     for y in 0..height {
         for x in 0..width {
             let c = grid[x][y];
-            if c == '|' || c == '~' {
+            if c == '~' {
                 count += 1;
             }
         }
     }
     println!("count: {}", count);
-    //my: 39879
-    //solution: 39877
 }
