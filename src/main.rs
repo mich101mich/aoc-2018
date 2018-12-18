@@ -10,158 +10,92 @@ use std::str::FromStr;
 mod utils;
 use crate::utils::*;
 
-fn parse_range(range: &str) -> (usize, usize) {
-    if range.contains("..") {
-        let mut r = range.split("..").map(|s| usize::from_str(s).unwrap());
-        (r.next().unwrap(), r.next().unwrap())
-    } else {
-        let r = usize::from_str(range).unwrap();
-        (r, r)
+fn count_grid(grid: &[Vec<char>], x: usize, y: usize, target: char) -> usize {
+    let w = grid.len();
+    let h = grid[0].len();
+    let mut count = 0;
+    if x > 0 {
+        if y > 0 {
+            count += (grid[y - 1][x - 1] == target) as usize;
+        }
+        count += (grid[y][x - 1] == target) as usize;
+        if y < h - 1 {
+            count += (grid[y + 1][x - 1] == target) as usize;
+        }
     }
-}
-
-fn solid(grid: &[Vec<char>], x: usize, y: usize) -> bool {
-    grid[x][y] == '#' || grid[x][y] == '~'
+    if y > 0 {
+        count += (grid[y - 1][x] == target) as usize;
+    }
+    if y < h - 1 {
+        count += (grid[y + 1][x] == target) as usize;
+    }
+    if x < w - 1 {
+        if y > 0 {
+            count += (grid[y - 1][x + 1] == target) as usize;
+        }
+        count += (grid[y][x + 1] == target) as usize;
+        if y < h - 1 {
+            count += (grid[y + 1][x + 1] == target) as usize;
+        }
+    }
+    count
 }
 
 fn main() {
-    let input = include_str!("input/day_17.txt");
+    let input = include_str!("input/day_18.txt");
 
-    let parsed = input
+    let mut grid = input
         .lines()
-        .map(|line| {
-            let l = line.split(", ").collect::<Vec<_>>();
-            if l[0].starts_with('x') {
-                (parse_range(&l[0][2..]), parse_range(&l[1][2..]))
-            } else {
-                (parse_range(&l[1][2..]), parse_range(&l[0][2..]))
-            }
-        })
+        .map(|line| line.chars().collect::<Vec<_>>())
         .collect::<Vec<_>>();
-    let mut min_x = 500;
-    let mut min_y = 0;
-    let mut max_x = 500;
-    let mut max_y = 0;
-    for (xr, yr) in &parsed {
-        if xr.0 < min_x {
-            min_x = xr.0;
-        }
-        if xr.1 > max_x {
-            max_x = xr.1;
-        }
-        if yr.0 < min_y {
-            min_y = yr.0;
-        }
-        if yr.0 > max_y {
-            max_y = yr.1;
-        }
-    }
-    min_x -= 2;
-    max_x += 2;
-    println!("{}", min_x);
-    println!("{}", min_y);
-    println!("{}", max_x);
-    println!("{}", max_y);
-    let width = max_x - min_x + 1;
-    let height = max_y - min_y + 1;
-    let mut grid = get_grid('.', width, height);
-    for (xr, yr) in &parsed {
-        for y in yr.0..=yr.1 {
-            for x in xr.0..=xr.1 {
-                grid[x - min_x][y - min_y] = '#';
-            }
-        }
-    }
-    grid[500 - min_x][0 - min_y] = '+';
 
-    let mut water = vec![(500 - min_x, 0)];
+    let w = grid.len();
+    let h = grid[0].len();
 
-    let mut change = true;
-
-    while change {
-        change = false;
-        for i in 0..water.len() {
-            let (x, y) = water[i];
-            if y + 1 == height || grid[x][y + 1] == '|' {
-                continue;
-            }
-
-            let mut dx = 0;
-            let mut dy = 0;
-            while y + dy + 1 < height && grid[x][y + dy + 1] == '.' {
-                dy += 1;
-                grid[x][y + dy] = '|';
-                water.push((x, y + dy));
-                change = true;
-            }
-            if y + dy + 1 == height || grid[x][y + dy + 1] == '|' {
-                continue;
-            }
-
-            while x - (dx + 1) > 0
-                && grid[x - (dx + 1)][y + dy] == '.'
-                && solid(&grid, x - dx, y + dy + 1)
-            {
-                dx += 1;
-                grid[x - dx][y + dy] = '|';
-                water.push((x - dx, y + dy));
-                change = true;
-            }
-
-            dx = 0;
-
-            while x + dx + 1 < width - 1
-                && grid[x + dx + 1][y + dy] == '.'
-                && solid(&grid, x + dx, y + dy + 1)
-            {
-                dx += 1;
-                grid[x + dx][y + dy] = '|';
-                water.push((x + dx, y + dy));
-                change = true;
-            }
-
-            if grid[x][y + dy] == '|' && solid(&grid, x, y + dy + 1) && grid[x - 1][y + dy] == '#' {
-                dx = 0;
-                while x + dx + 1 < width
-                    && !solid(&grid, x + dx + 1, y + dy)
-                    && solid(&grid, x + dx, y + dy + 1)
-                {
-                    dx += 1;
-                }
-                if solid(&grid, x + dx + 1, y + dy) && solid(&grid, x + dx, y + dy + 1) {
-                    for gx in 0..=dx {
-                        grid[x + gx][y + dy] = '~';
+    for _round in 0..10 {
+        let old = grid.clone();
+        for x in 0..w {
+            for y in 0..h {
+                match old[y][x] {
+                    '.' => {
+                        if count_grid(&old, x, y, '|') >= 3 {
+                            grid[y][x] = '|';
+                        }
                     }
-                    change = true;
+                    '|' => {
+                        if count_grid(&old, x, y, '#') >= 3 {
+                            grid[y][x] = '#';
+                        }
+                    }
+                    '#' => {
+                        if count_grid(&old, x, y, '#') == 0 || count_grid(&old, x, y, '|') == 0 {
+                            grid[y][x] = '.';
+                        }
+                    }
+                    _ => panic!(),
                 }
             }
         }
-        water.retain(|&(x, y)| grid[x][y] == '|');
-        //for y in 0..height {
-        //    for x in 0..width {
-        //        print!("{}", grid[x][y]);
-        //    }
-        //    println!();
-        //}
-        //println!();
-    }
-    println!("done");
-    let mut file = std::fs::File::create("out.txt").unwrap();
-    for y in 0..height {
-        for x in 0..width {
-            write!(file, "{}", grid[x][y]).unwrap();
+        for y in 0..h {
+            for x in 0..w {
+                print!("{}", grid[y][x]);
+            }
+            println!();
         }
-        writeln!(file).unwrap();
+        println!();
     }
-    writeln!(file).unwrap();
-    let mut count = 0;
-    for y in 0..height {
-        for x in 0..width {
-            let c = grid[x][y];
-            if c == '~' {
-                count += 1;
+    let mut lum = 0;
+    let mut wood = 0;
+    for y in 0..h {
+        for x in 0..w {
+            match grid[y][x] {
+                '#' => lum += 1,
+                '|' => wood += 1,
+                _ => {}
             }
         }
     }
-    println!("count: {}", count);
+    println!("{}", wood);
+    println!("{}", lum);
+    println!("{}", wood * lum);
 }
