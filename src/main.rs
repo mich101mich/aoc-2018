@@ -52,7 +52,7 @@ fn main() {
     let w = grid.len();
     let h = grid[0].len();
 
-    for _round in 0..10 {
+    for _round in 0..100100 {
         let old = grid.clone();
         for x in 0..w {
             for y in 0..h {
@@ -76,13 +76,20 @@ fn main() {
                 }
             }
         }
-        for y in 0..h {
-            for x in 0..w {
-                print!("{}", grid[y][x]);
+        if _round >= 100000 {
+            let mut lum = 0;
+            let mut wood = 0;
+            for y in 0..h {
+                for x in 0..w {
+                    match grid[y][x] {
+                        '#' => lum += 1,
+                        '|' => wood += 1,
+                        _ => {}
+                    }
+                }
             }
-            println!();
+            println!("{}", wood * lum);
         }
-        println!();
     }
     let mut lum = 0;
     let mut wood = 0;
@@ -98,4 +105,6 @@ fn main() {
     println!("{}", wood);
     println!("{}", lum);
     println!("{}", wood * lum);
+
+    // result: 174584
 }
