@@ -10,101 +10,107 @@ use std::str::FromStr;
 mod utils;
 use crate::utils::*;
 
-fn count_grid(grid: &[Vec<char>], x: usize, y: usize, target: char) -> usize {
-    let w = grid.len();
-    let h = grid[0].len();
-    let mut count = 0;
-    if x > 0 {
-        if y > 0 {
-            count += (grid[y - 1][x - 1] == target) as usize;
-        }
-        count += (grid[y][x - 1] == target) as usize;
-        if y < h - 1 {
-            count += (grid[y + 1][x - 1] == target) as usize;
-        }
-    }
-    if y > 0 {
-        count += (grid[y - 1][x] == target) as usize;
-    }
-    if y < h - 1 {
-        count += (grid[y + 1][x] == target) as usize;
-    }
-    if x < w - 1 {
-        if y > 0 {
-            count += (grid[y - 1][x + 1] == target) as usize;
-        }
-        count += (grid[y][x + 1] == target) as usize;
-        if y < h - 1 {
-            count += (grid[y + 1][x + 1] == target) as usize;
-        }
-    }
-    count
-}
-
 fn main() {
-    let input = include_str!("input/day_18.txt");
+    let input = include_str!("input/day_19.txt");
 
-    let mut grid = input
+    let lines = input
         .lines()
-        .map(|line| line.chars().collect::<Vec<_>>())
+        .skip(1)
+        .map(|line| {
+            let mut sp = line.split(' ');
+            let op = sp.next().unwrap();
+            let n = sp
+                .map(|num| usize::from_str(num).unwrap())
+                .collect::<Vec<_>>();
+            (op, n[0], n[1], n[2])
+        })
         .collect::<Vec<_>>();
 
-    let w = grid.len();
-    let h = grid[0].len();
+    let ip_reg = usize::from_str(&input.lines().next().unwrap()[4..]).unwrap();
+    println!("{}", ip_reg);
 
-    for _round in 0..100100 {
-        let old = grid.clone();
-        for x in 0..w {
-            for y in 0..h {
-                match old[y][x] {
-                    '.' => {
-                        if count_grid(&old, x, y, '|') >= 3 {
-                            grid[y][x] = '|';
-                        }
-                    }
-                    '|' => {
-                        if count_grid(&old, x, y, '#') >= 3 {
-                            grid[y][x] = '#';
-                        }
-                    }
-                    '#' => {
-                        if count_grid(&old, x, y, '#') == 0 || count_grid(&old, x, y, '|') == 0 {
-                            grid[y][x] = '.';
-                        }
-                    }
-                    _ => panic!(),
-                }
-            }
-        }
-        if _round >= 100000 {
-            let mut lum = 0;
-            let mut wood = 0;
-            for y in 0..h {
-                for x in 0..w {
-                    match grid[y][x] {
-                        '#' => lum += 1,
-                        '|' => wood += 1,
-                        _ => {}
-                    }
-                }
-            }
-            println!("{}", wood * lum);
-        }
-    }
-    let mut lum = 0;
-    let mut wood = 0;
-    for y in 0..h {
-        for x in 0..w {
-            match grid[y][x] {
-                '#' => lum += 1,
-                '|' => wood += 1,
-                _ => {}
-            }
-        }
-    }
-    println!("{}", wood);
-    println!("{}", lum);
-    println!("{}", wood * lum);
+    let mut registers = [0; 6];
 
-    // result: 174584
+    let mut ip = 0;
+
+    loop {
+        registers[ip_reg] = ip;
+
+        if ip >= lines.len() {
+            println!("{}", registers[0]);
+            return;
+        }
+        let instr = lines[ip];
+
+        match instr.0 {
+            "addr" => {
+                let res = registers[instr.1] + registers[instr.2];
+                registers[instr.3] = res;
+            }
+            "addi" => {
+                let res = registers[instr.1] + instr.2;
+                registers[instr.3] = res;
+            }
+            "mulr" => {
+                let res = registers[instr.1] * registers[instr.2];
+                registers[instr.3] = res;
+            }
+            "muli" => {
+                let res = registers[instr.1] * instr.2;
+                registers[instr.3] = res;
+            }
+            "banr" => {
+                let res = registers[instr.1] & registers[instr.2];
+                registers[instr.3] = res;
+            }
+            "bani" => {
+                let res = registers[instr.1] & instr.2;
+                registers[instr.3] = res;
+            }
+            "borr" => {
+                let res = registers[instr.1] | registers[instr.2];
+                registers[instr.3] = res;
+            }
+            "bori" => {
+                let res = registers[instr.1] | instr.2;
+                registers[instr.3] = res;
+            }
+            "setr" => {
+                let res = registers[instr.1];
+                registers[instr.3] = res;
+            }
+            "seti" => {
+                let res = instr.1;
+                registers[instr.3] = res;
+            }
+            "gtir" => {
+                let res = instr.1 > registers[instr.2];
+                registers[instr.3] = res as usize;
+            }
+            "gtri" => {
+                let res = registers[instr.1] > instr.2;
+                registers[instr.3] = res as usize;
+            }
+            "gtrr" => {
+                let res = registers[instr.1] > registers[instr.2];
+                registers[instr.3] = res as usize;
+            }
+            "eqir" => {
+                let res = instr.1 == registers[instr.2];
+                registers[instr.3] = res as usize;
+            }
+            "eqri" => {
+                let res = registers[instr.1] == instr.2;
+                registers[instr.3] = res as usize;
+            }
+            "eqrr" => {
+                let res = registers[instr.1] == registers[instr.2];
+                registers[instr.3] = res as usize;
+            }
+            op => panic!("no op: {}", op),
+        }
+
+        ip = registers[ip_reg];
+        ip += 1;
+    }
 }
