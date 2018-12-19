@@ -30,12 +30,12 @@ fn main() {
     println!("{}", ip_reg);
 
     let mut registers = [0; 6];
+    registers[0] = 1;
 
     let mut ip = 0;
 
+    registers[ip_reg] = ip;
     loop {
-        registers[ip_reg] = ip;
-
         if ip >= lines.len() {
             println!("{}", registers[0]);
             return;
@@ -109,8 +109,13 @@ fn main() {
             }
             op => panic!("no op: {}", op),
         }
+        if instr.3 == 0 {
+            println!("{:?}", registers);
+            // all divisors of registers[4] summed up -.-
+        }
 
         ip = registers[ip_reg];
         ip += 1;
+        registers[ip_reg] += 1;
     }
 }
