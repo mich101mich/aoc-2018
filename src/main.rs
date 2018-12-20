@@ -91,6 +91,12 @@ fn main() {
     );
 
     let max: usize = paths.values().map(|p| p.cost).max().unwrap();
+    let count: usize = paths
+        .values()
+        .map(|p| p.cost)
+        .filter(|cost| *cost >= 1000)
+        .count();
 
     println!("max: {}", max);
+    println!("count: {}", count);
 }
