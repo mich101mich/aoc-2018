@@ -11,111 +11,86 @@ mod utils;
 use crate::utils::*;
 
 fn main() {
-    let input = include_str!("input/day_19.txt");
+    let input = include_str!("input/day_20.txt");
+    println!("start parsing");
 
-    let lines = input
-        .lines()
-        .skip(1)
-        .map(|line| {
-            let mut sp = line.split(' ');
-            let op = sp.next().unwrap();
-            let n = sp
-                .map(|num| usize::from_str(num).unwrap())
-                .collect::<Vec<_>>();
-            (op, n[0], n[1], n[2])
-        })
-        .collect::<Vec<_>>();
+    let mut visited = HashMap::new();
+    visited.insert((0, 0), [false; 4]);
 
-    let ip_reg = usize::from_str(&input.lines().next().unwrap()[4..]).unwrap();
-    println!("{}", ip_reg);
+    let mut positions = vec![(0, 0)];
 
-    let mut registers = [0; 6];
-    registers[0] = 1;
+    let mut backup = vec![];
+    backup.push(positions.clone());
 
-    let mut ip = 0;
+    let mut alt: Vec<Vec<(i32, i32)>> = vec![];
+    let mut alt_backup = vec![];
 
-    registers[ip_reg] = ip;
-    loop {
-        if ip >= lines.len() {
-            println!("{}", registers[0]);
-            return;
+    for c in input.chars().skip(1) {
+        let dir;
+        match c {
+            '(' => {
+                backup.push(positions.clone());
+                alt = vec![];
+                continue;
+            }
+            ')' => {
+                for a in alt.into_iter() {
+                    positions.reserve(a.len());
+                    for pos in a {
+                        positions.push(pos);
+                    }
+                }
+                positions.sort_by_key(|p| p.0 * 1000 + p.1);
+                positions.dedup();
+                alt = alt_backup.pop().unwrap_or(vec![]);
+                backup.pop();
+                continue;
+            }
+            '|' => {
+                alt.push(positions);
+                positions = backup.last().unwrap().clone();
+                continue;
+            }
+            'N' => dir = 0,
+            'S' => dir = 2,
+            'W' => dir = 3,
+            'E' => dir = 1,
+            '$' => break,
+            c => panic!("unexpected {}", c),
         }
-        let instr = lines[ip];
-
-        match instr.0 {
-            "addr" => {
-                let res = registers[instr.1] + registers[instr.2];
-                registers[instr.3] = res;
-            }
-            "addi" => {
-                let res = registers[instr.1] + instr.2;
-                registers[instr.3] = res;
-            }
-            "mulr" => {
-                let res = registers[instr.1] * registers[instr.2];
-                registers[instr.3] = res;
-            }
-            "muli" => {
-                let res = registers[instr.1] * instr.2;
-                registers[instr.3] = res;
-            }
-            "banr" => {
-                let res = registers[instr.1] & registers[instr.2];
-                registers[instr.3] = res;
-            }
-            "bani" => {
-                let res = registers[instr.1] & instr.2;
-                registers[instr.3] = res;
-            }
-            "borr" => {
-                let res = registers[instr.1] | registers[instr.2];
-                registers[instr.3] = res;
-            }
-            "bori" => {
-                let res = registers[instr.1] | instr.2;
-                registers[instr.3] = res;
-            }
-            "setr" => {
-                let res = registers[instr.1];
-                registers[instr.3] = res;
-            }
-            "seti" => {
-                let res = instr.1;
-                registers[instr.3] = res;
-            }
-            "gtir" => {
-                let res = instr.1 > registers[instr.2];
-                registers[instr.3] = res as usize;
-            }
-            "gtri" => {
-                let res = registers[instr.1] > instr.2;
-                registers[instr.3] = res as usize;
-            }
-            "gtrr" => {
-                let res = registers[instr.1] > registers[instr.2];
-                registers[instr.3] = res as usize;
-            }
-            "eqir" => {
-                let res = instr.1 == registers[instr.2];
-                registers[instr.3] = res as usize;
-            }
-            "eqri" => {
-                let res = registers[instr.1] == instr.2;
-                registers[instr.3] = res as usize;
-            }
-            "eqrr" => {
-                let res = registers[instr.1] == registers[instr.2];
-                registers[instr.3] = res as usize;
-            }
-            op => panic!("no op: {}", op),
+        let delta = [(0i32, -1i32), (1, 0), (0, 1), (-1, 0)][dir];
+        for p in &mut positions {
+            visited.entry(*p).or_insert([false; 4])[dir] = true;
+            p.0 += delta.0;
+            p.1 += delta.1;
+            visited.entry(*p).or_insert([false; 4])[(dir + 2) % 4] = true;
         }
-        if instr.3 == 0 {
-            println!("{:?}", registers);
-            // all divisors of registers[4] summed up -.-
-        }
-
-        ip = registers[ip_reg];
-        ip += 1;
-        registers[ip_reg] += 1;
     }
+
+    println!("done parsing");
+
+    let targets = visited.keys().cloned().collect::<Vec<_>>();
+    let paths = dijkstra_search(
+        |k| {
+            visited[&k]
+                .iter()
+                .enumerate()
+                .filter(|&(_, b)| *b)
+                .map(move |(i, _)| match i {
+                    0 => (k.0, k.1 - 1),
+                    1 => (k.0 + 1, k.1),
+                    2 => (k.0, k.1 + 1),
+                    3 => (k.0 - 1, k.1),
+                    _ => panic!("meh"),
+                })
+        },
+        |_, _| 1,
+        |_| true,
+        (0, 0),
+        &targets,
+    );
+
+    let max: usize = paths.values().map(|p| p.cost).max().unwrap();
+
+    println!("max: {}", max);
 }
