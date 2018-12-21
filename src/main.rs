@@ -28,17 +28,45 @@ fn main() {
 
     let ip_reg = usize::from_str(&input.lines().next().unwrap()[4..]).unwrap();
 
-    let mut logging = 0;
+    let mut prev = HashSet::new();
+    let mut old = vec![];
+    let mut logging = false;
 
-    for start in 7967233..7967234 {
+    //for start in 0..1 {
         let mut registers = [0; 6];
 
-        registers[0] = start;
+        registers[0] = 16477902;
         let mut ip = 0;
 
-        for round in 0..1000000 {
+        for round in 0..10000000000u64 {
             registers[ip_reg] = ip;
+            if round == 2434104119 {
+                println!("result {}", registers[3]);
+                println!("{:?}", registers);
+                println!("{:?}", old); // last value in this is last terminating value
+                return;
+            }
             if ip == 13 && registers[1] < 256 {
+            if round > 2434104119 {
+                println!("{:?}", registers);
+                if round > 2434104219 {
+                    return;
+                }
+            }
+                //println!("{}", registers[3]); //2434104120 2434104120
+                if !logging {
+                    if !prev.insert(registers[3]) {
+                        println!("{} in {}", registers[3], round);
+                        logging = true;
+                    }
+                    if round > 2400004119 {
+                        old.push(registers[3]);
+                    }
+                } else if prev.insert(registers[3]) {
+                    println!("{}", registers[3]);
+                }
+            }
+            /*if ip == 13 && registers[1] < 256 {
                 logging = 10;
             }
             if logging > 0 {
@@ -47,11 +75,11 @@ fn main() {
                 if logging == 0 {
                     return;
                 }
-            }
+            }*/
             //println!("{}, {}", round, ip);
 
             if ip >= lines.len() {
-                println!("{} stops at {}", start, round);
+                println!("{} stops at {}", 16477902, round);
                 return;
             }
             let instr = lines[ip];
@@ -124,8 +152,12 @@ fn main() {
                 op => panic!("no op: {}", op),
             }
 
+            /*if ip > 3 && instr.3 == 3 {
+                println!("{:?}", registers[3]);
+            }*/
+
             ip = registers[ip_reg];
             ip += 1;
         }
-    }
+    
 }
