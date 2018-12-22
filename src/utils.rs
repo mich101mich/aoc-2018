@@ -27,8 +27,12 @@ pub fn neighbours(
 	n.into_iter()
 }
 
-pub fn manhatten(p1: (usize, usize), p2: (usize, usize)) -> usize {
-	((p1.0 as i32 - p2.0 as i32).abs() + (p1.1 as i32 - p2.1 as i32).abs()) as usize
+pub fn diff(a: usize, b: usize) -> usize{
+	(a as isize - b as isize).abs() as usize
+}
+
+pub fn manhattan(p1: (usize, usize), p2: (usize, usize)) -> usize {
+	diff(p1.0, p2.0) + diff(p1.1, p2.1)
 }
 
 pub fn get_grid<T: Clone>(value: T, width: usize, height: usize) -> Vec<Vec<T>> {

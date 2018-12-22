@@ -38,18 +38,19 @@ fn main() {
     pv!(depth);
     pv!(target);
 
-    let mut grid = get_grid(0, target.0 + 1, target.1 + 1);
+    let w = target.0 + 500;
+    let h = target.1 + 500;
 
-    grid[0][0] = (0 + depth) % 20183;
+    let mut grid = get_grid(0, w, h);
 
-    for y in 1..=target.1 {
+    for y in 0..h {
         grid[0][y] = (y * 48271 + depth) % 20183;
     }
-    for x in 1..=target.0 {
+    for x in 1..w {
         grid[x][0] = (x * 16807 + depth) % 20183;
     }
-    for x in 1..=target.0 {
-        for y in 1..=target.1 {
+    for x in 1..w {
+        for y in 1..h {
             if x == target.0 && y == target.1 {
                 grid[x][y] = (0 + depth) % 20183;
             } else {
@@ -58,8 +59,8 @@ fn main() {
         }
     }
 
-    for x in 0..=target.0 {
-        for y in 0..=target.1 {
+    for x in 0..w {
+        for y in 0..h {
             grid[x][y] %= 3;
         }
     }
@@ -71,6 +72,60 @@ fn main() {
         }
     }
     pv!(sum);
+
+    fn get_tool(t: usize) -> [usize; 2] {
+        match t {
+            0 => [1, 2],
+            1 => [2, 0],
+            2 => [1, 0],
+            c => panic!("{}", c),
+        }
+    }
+
+    let path = a_star_search(
+        |(x, y, tool)| {
+            let mut targets = vec![];
+            let tools = get_tool(grid[x][y]);
+            if tool == tools[0] {
+                targets.push((x, y, tools[1]));
+            } else {
+                targets.push((x, y, tools[0]));
+            }
+            if x > 0 {
+                let next = (x - 1, y, tool);
+                if get_tool(grid[next.0][next.1]).contains(&tool) {
+                    targets.push(next);
+                }
+            }
+            if y > 0 {
+                let next = (x, y - 1, tool);
+                if get_tool(grid[next.0][next.1]).contains(&tool) {
+                    targets.push(next);
+                }
+            }
+            if x < w - 1 {
+                let next = (x + 1, y, tool);
+                if get_tool(grid[next.0][next.1]).contains(&tool) {
+                    targets.push(next);
+                }
+            }
+            if y < h - 1 {
+                let next = (x, y + 1, tool);
+                if get_tool(grid[next.0][next.1]).contains(&tool) {
+                    targets.push(next);
+                }
+            }
+            targets.into_iter()
+        },
+        |a, b| if a.2 != b.2 { 7 } else { 0 } + diff(a.0, b.0) + diff(a.1, b.1),
+        |_| true,
+        (0, 0, 1),
+        (target.0, target.1, 1),
+        |p| manhattan((p.0, p.1), target),
+    )
+    .expect("no path in area");
+
+    pv!(path.cost);
 }
 
 #[allow(unused)]
