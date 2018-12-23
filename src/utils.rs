@@ -6,6 +6,12 @@ use std::collections::HashSet;
 use std::io::Write;
 use std::str::FromStr;
 
+macro_rules! pv {
+    ($var: expr) => {
+        println!("{}: {:?}", stringify!($var), $var)
+    };
+}
+
 pub fn neighbours(
 	(x, y): (usize, usize),
 	width: usize,
@@ -30,9 +36,19 @@ pub fn neighbours(
 pub fn diff(a: usize, b: usize) -> usize{
 	(a as isize - b as isize).abs() as usize
 }
+pub fn diff_i(a: isize, b: isize) -> usize{
+	(a - b).abs() as usize
+}
 
 pub fn manhattan(p1: (usize, usize), p2: (usize, usize)) -> usize {
 	diff(p1.0, p2.0) + diff(p1.1, p2.1)
+}
+
+pub fn manhattan_3d(p1: (usize, usize, usize), p2: (usize, usize, usize)) -> usize {
+	diff(p1.0, p2.0) + diff(p1.1, p2.1) + diff(p1.2, p2.2)
+}
+pub fn manhattan_3d_i(p1: (isize, isize, isize), p2: (isize, isize, isize)) -> usize {
+	diff_i(p1.0, p2.0) + diff_i(p1.1, p2.1) + diff_i(p1.2, p2.2)
 }
 
 pub fn get_grid<T: Clone>(value: T, width: usize, height: usize) -> Vec<Vec<T>> {
