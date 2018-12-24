@@ -5,6 +5,8 @@
 use crate::Dir::*;
 use rand::prelude::*;
 use rayon::prelude::*;
+use regex::Regex;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Write;
@@ -14,119 +16,161 @@ use std::str::FromStr;
 mod utils;
 use crate::utils::*;
 
-fn get_count(bots: &[((isize, isize, isize), usize)], pos: (isize, isize, isize)) -> usize {
-    bots.par_iter()
-        .filter(|&(p, r)| manhattan_3d_i(*p, pos) <= *r)
-        .count()
+#[derive(Clone, Debug, PartialEq)]
+struct Army {
+    immune_system: bool,
+    units: usize,
+    hit_points: usize,
+    immunities: HashSet<&'static str>,
+    weaknesses: HashSet<&'static str>,
+    attack: usize,
+    attack_type: &'static str,
+    initiative: usize,
+}
+impl Army {
+    pub fn effective(&self) -> usize {
+        self.units * self.attack
+    }
+    pub fn damage(&self, other: &Army) -> usize {
+        if other.immunities.contains(&self.attack_type) {
+            0
+        } else if other.weaknesses.contains(&self.attack_type) {
+            self.effective() * 2
+        } else {
+            self.effective()
+        }
+    }
+}
+
+fn to_army(s: &'static str, immune_system: bool) -> Army {
+    let re = Regex::from_str(r"(?P<units>\d+) units each with (?P<hit_points>\d+) hit points (\((immune to (?P<immunities>.*?))?;? ?(weak to (?P<weaknesses>.*?))?;? ?(immune to (?P<immunities2>.*?))?\) )?with an attack that does (?P<attack>\d+) (?P<attack_type>[a-z]+) damage at initiative (?P<initiative>\d+)").expect("regex");
+
+    let m = re.captures(s).expect("match");
+    Army {
+        immune_system,
+        units: usize::from_str(m.name("units").expect("match units").as_str())
+            .expect("parse units"),
+        hit_points: usize::from_str(m.name("hit_points").expect("match hit_points").as_str())
+            .expect("parse hit_points"),
+        immunities: m
+            .name("immunities")
+            .or(m.name("immunities2"))
+            .map(|m| m.as_str().split(", ").collect())
+            .unwrap_or_else(HashSet::new),
+        weaknesses: m
+            .name("weaknesses")
+            .map(|m| m.as_str().split(", ").collect())
+            .unwrap_or_else(HashSet::new),
+        attack: usize::from_str(m.name("attack").expect("match attack").as_str())
+            .expect("parse attack"),
+        attack_type: m.name("attack_type").expect("match attack_type").as_str(),
+        initiative: usize::from_str(m.name("initiative").expect("match initiative").as_str())
+            .expect("parse initiative"),
+    }
 }
 
 fn main() {
-    let input = include_str!("input/day_23.txt");
+    let input = include_str!("input/day_24.txt");
 
-    let bots = input
+    let immune_system = input
         .lines()
-        .map(|line| {
-            let mut split = line[5..].split(">, r=");
-            let pos = split
-                .next()
-                .unwrap()
-                .split(',')
-                .map(|s| isize::from_str(s).unwrap())
-                .collect::<Vec<_>>();
-            let radius = usize::from_str(split.next().unwrap()).unwrap();
-            ((pos[0], pos[1], pos[2]), radius)
-        })
+        .skip(1)
+        .take_while(|s| *s != "")
+        .map(|s| to_army(s, true))
+        .collect::<Vec<_>>();
+    let infection = input
+        .lines()
+        .skip_while(|s| *s != "Infection:")
+        .skip(1)
+        .map(|s| to_army(s, false))
         .collect::<Vec<_>>();
 
-    let mut min_pos = bots[0].0;
-    let mut max_pos = bots[0].0;
-    for &(p, _) in &bots {
-        min_pos.0 = min_pos.0.min(p.0);
-        min_pos.1 = min_pos.1.min(p.1);
-        min_pos.2 = min_pos.2.min(p.2);
-        max_pos.0 = max_pos.0.max(p.0);
-        max_pos.1 = max_pos.1.max(p.1);
-        max_pos.2 = max_pos.2.max(p.2);
-    }
+    let mut groups = immune_system.clone();
+    groups.append(&mut infection.clone());
 
-    let mut rng = rand::thread_rng();
+    pv!(groups);
 
-    let mut resolution = 1000000;
-    let gen_size = 200;
+    loop {
+        groups.sort_by(|a, b| match a.effective().cmp(&b.effective()) {
+            Ordering::Equal => a.initiative.cmp(&b.initiative),
+            ord => ord,
+        });
+        groups.reverse();
+        let mut matches = vec![];
 
-    let mut positions = vec![
-        ((0, 0, 0), get_count(&bots, (0, 0, 0))),
-        ((15972003, 44657553, 29285970), 977),
-    ];
-    for _ in 0..gen_size {
-        let pos = (
-            rng.gen_range(min_pos.0, max_pos.0),
-            rng.gen_range(min_pos.1, max_pos.1),
-            rng.gen_range(min_pos.2, max_pos.2),
-        );
-        positions.push((pos, get_count(&bots, pos)));
-    }
-
-    while resolution > 0 {
-        for _ in 0..(gen_size / 2) {
-            let pos = (
-                rng.gen_range(min_pos.0, max_pos.0),
-                rng.gen_range(min_pos.1, max_pos.1),
-                rng.gen_range(min_pos.2, max_pos.2),
-            );
-            positions.push((pos, get_count(&bots, pos)));
+        for g in 0..groups.len() {
+            let current = &groups[g];
+            let mut best = None;
+            let mut max = 0;
+            for (o, other) in groups
+                .iter()
+                .enumerate()
+                .filter(|(_, o)| o.immune_system != current.immune_system)
+                .filter(|(o, _)| matches.iter().find(|(_, target)| o == target).is_none())
+            {
+                let damage = current.damage(other);
+                //println!("{} -> {}: {}", g, o, damage);
+                if damage > max {
+                    max = damage;
+                    best = Some(o);
+                }
+            }
+            if let Some(other) = best {
+                matches.push((g, other));
+            }
         }
-        positions.par_sort_unstable_by_key(|(_, count)| bots.len() - *count);
-        pv!(positions[0]);
-        positions.truncate(gen_size);
-        let lowest = positions[gen_size - 1].1;
-        for (p, _) in positions.clone() {
-            for dx in -4..=4 {
-                for dy in -4..=4 {
-                    for dz in -4..=4 {
-                        let pos = (
-                            p.0 + dx * resolution,
-                            p.1 + dy * resolution,
-                            p.2 + dz * resolution,
-                        );
-                        let count = get_count(&bots, pos);
-                        if count > lowest {
-                            positions.push((pos, count));
-                        }
-                    }
+
+        matches.sort_by_key(|&(a, _)| -(groups[a].initiative as isize));
+
+        let mut died = vec![];
+        for m in 0..matches.len() {
+            let (a, b) = matches[m];
+            if died.contains(&a) || died.contains(&b) {
+                continue;
+            }
+            let damage = groups[a].damage(&groups[b]);
+
+            let target = &mut groups[b];
+            let defeated = damage / target.hit_points;
+            //pv!(defeated.min(target.units));
+            if target.units <= defeated {
+                died.push(b);
+            } else {
+                target.units -= defeated;
+            }
+        }
+        while let Some(dead) = died.pop() {
+            groups.remove(dead);
+            for other in &mut died {
+                if *other > dead {
+                    *other -= 1;
                 }
             }
         }
-        resolution = (resolution as f32 * 0.8) as isize;
-        pv!(resolution);
-    }
-    // ((15972003, 44657553, 29285970), 977)
+        //pv!(groups);
 
-    let best_pos = positions[0].0;
-
-    let mut best_count = 0;
-    let mut real_best_pos = best_pos;
-    let mut best_dist = manhattan_3d_i(real_best_pos, (0, 0, 0));
-    for dx in -50..=50 {
-        for dy in -50..=50 {
-            for dz in -50..=50 {
-                let pos = (best_pos.0 + dx, best_pos.1 + dy, best_pos.2 + dz);
-                let count = get_count(&bots, pos);
-                if count > best_count
-                    || (count == best_count && manhattan_3d_i(pos, (0, 0, 0)) < best_dist)
-                {
-                    best_count = count;
-                    real_best_pos = pos;
-                    best_dist = manhattan_3d_i(real_best_pos, (0, 0, 0));
-                }
-            }
+        if groups.iter().find(|army| army.immune_system).is_none()
+            || groups.iter().find(|army| !army.immune_system).is_none()
+        {
+            break;
         }
     }
-    pv!(real_best_pos == best_pos);
-    pv!(real_best_pos);
-    pv!(best_count);
-    pv!(best_dist); // more than 1047 and 35626375 and 87924130
-                    // not enough: best_count = 912 and best_dist = 87924130
+    pv!(groups);
+    let immune_system: usize = groups
+        .iter()
+        .filter(|army| army.immune_system)
+        .map(|army| army.units)
+        .sum();
+    let infection: usize = groups
+        .iter()
+        .filter(|army| !army.immune_system)
+        .map(|army| army.units)
+        .sum();
+    pv!(immune_system);
+    pv!(infection);
+
+    // 18972 too high
+    // 18717
 }
 
 #[allow(unused)]
