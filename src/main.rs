@@ -90,87 +90,107 @@ fn main() {
 
     pv!(groups);
 
-    loop {
-        groups.sort_by(|a, b| match a.effective().cmp(&b.effective()) {
-            Ordering::Equal => a.initiative.cmp(&b.initiative),
-            ord => ord,
-        });
-        groups.reverse();
-        let mut matches = vec![];
+    'boost: for boost in 0.. {
+        pv!(boost);
 
-        for g in 0..groups.len() {
-            let current = &groups[g];
-            let mut best = None;
-            let mut max = 0;
-            for (o, other) in groups
-                .iter()
-                .enumerate()
-                .filter(|(_, o)| o.immune_system != current.immune_system)
-                .filter(|(o, _)| matches.iter().find(|(_, target)| o == target).is_none())
+        let mut groups = groups.clone();
+        for g in &mut groups {
+            if g.immune_system {
+                g.attack += boost;
+            }
+        }
+
+        loop {
+            groups.sort_by(|a, b| match a.effective().cmp(&b.effective()) {
+                Ordering::Equal => a.initiative.cmp(&b.initiative),
+                ord => ord,
+            });
+            groups.reverse();
+            let mut matches = vec![];
+
+            for g in 0..groups.len() {
+                let current = &groups[g];
+                let mut best = None;
+                let mut max = 0;
+                for (o, other) in groups
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, o)| o.immune_system != current.immune_system)
+                    .filter(|(o, _)| matches.iter().find(|(_, target)| o == target).is_none())
+                {
+                    let damage = current.damage(other);
+                    //println!("{} -> {}: {}", g, o, damage);
+                    if damage > max {
+                        max = damage;
+                        best = Some(o);
+                    }
+                }
+                if let Some(other) = best {
+                    matches.push((g, other));
+                }
+            }
+
+            matches.sort_by_key(|&(a, _)| -(groups[a].initiative as isize));
+
+            let mut died = vec![];
+            let mut total_defeated = 0;
+            for m in 0..matches.len() {
+                let (a, b) = matches[m];
+                if died.contains(&a) || died.contains(&b) {
+                    continue;
+                }
+                let damage = groups[a].damage(&groups[b]);
+
+                let target = &mut groups[b];
+                let defeated = damage / target.hit_points;
+
+                total_defeated += defeated;
+
+                if target.units <= defeated {
+                    died.push(b);
+                } else {
+                    target.units -= defeated;
+                }
+            }
+
+            if total_defeated == 0 {
+                continue 'boost;
+            }
+
+            while let Some(dead) = died.pop() {
+                groups.remove(dead);
+                for other in &mut died {
+                    if *other > dead {
+                        *other -= 1;
+                    }
+                }
+            }
+            //pv!(groups);
+
+            if groups.iter().find(|army| army.immune_system).is_none()
+                || groups.iter().find(|army| !army.immune_system).is_none()
             {
-                let damage = current.damage(other);
-                //println!("{} -> {}: {}", g, o, damage);
-                if damage > max {
-                    max = damage;
-                    best = Some(o);
-                }
-            }
-            if let Some(other) = best {
-                matches.push((g, other));
+                break;
             }
         }
-
-        matches.sort_by_key(|&(a, _)| -(groups[a].initiative as isize));
-
-        let mut died = vec![];
-        for m in 0..matches.len() {
-            let (a, b) = matches[m];
-            if died.contains(&a) || died.contains(&b) {
-                continue;
-            }
-            let damage = groups[a].damage(&groups[b]);
-
-            let target = &mut groups[b];
-            let defeated = damage / target.hit_points;
-            //pv!(defeated.min(target.units));
-            if target.units <= defeated {
-                died.push(b);
-            } else {
-                target.units -= defeated;
-            }
-        }
-        while let Some(dead) = died.pop() {
-            groups.remove(dead);
-            for other in &mut died {
-                if *other > dead {
-                    *other -= 1;
-                }
-            }
-        }
-        //pv!(groups);
-
-        if groups.iter().find(|army| army.immune_system).is_none()
-            || groups.iter().find(|army| !army.immune_system).is_none()
-        {
+        pv!(groups);
+        let immune_system: usize = groups
+            .iter()
+            .filter(|army| army.immune_system)
+            .map(|army| army.units)
+            .sum();
+        let infection: usize = groups
+            .iter()
+            .filter(|army| !army.immune_system)
+            .map(|army| army.units)
+            .sum();
+        pv!(immune_system);
+        pv!(infection);
+        println!();
+        if immune_system > 0 {
             break;
         }
     }
-    pv!(groups);
-    let immune_system: usize = groups
-        .iter()
-        .filter(|army| army.immune_system)
-        .map(|army| army.units)
-        .sum();
-    let infection: usize = groups
-        .iter()
-        .filter(|army| !army.immune_system)
-        .map(|army| army.units)
-        .sum();
-    pv!(immune_system);
-    pv!(infection);
-
-    // 18972 too high
-    // 18717
 }
 
 #[allow(unused)]
