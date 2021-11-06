@@ -1,0 +1,3 @@
+[submodule "src/utils"]
+	path = src/utils
+	url = git@github.com:mich101mich/aoc-utils.git

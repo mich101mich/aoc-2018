@@ -5,6 +5,9 @@ authors = ["mich101mich <mich101mich@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-rayon = "1.0.3"
-rand = "0.6.1"
-regex = "1.1.0"
+rayon = "1.5"
+rand = "0.8"
+regex = "1.5"
+sscanf = "0.1"
+permutohedron = "0.2"
+num = "0.4"
