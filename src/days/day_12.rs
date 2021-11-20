@@ -1,5 +1,4 @@
 use crate::utils::*;
-use std::collections::hash_map::Entry;
 
 fn calc_score(state: &[bool], num_iter: usize, padding: usize) -> isize {
     state
