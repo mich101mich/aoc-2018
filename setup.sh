@@ -12,7 +12,7 @@ pub fn run() {
         //.chars()
         //.map(|l| l.chars().to_vec())
         //.map(parse)
-        //.map(|l| scanf!(l, \"{}\", isize).unwrap())
+        //.map(|l| sscanf!(l, \"{isize}\").unwrap())
         //.to_vec()
         //.sum::<isize>()
         //.parse::<isize>()

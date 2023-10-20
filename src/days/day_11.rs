@@ -17,16 +17,21 @@ pub fn run() {
 
     let serial = parse(input);
 
-    let mut grid = Grid::new_clone((300, 300), 0isize);
-    let mut integral_image = Grid::new_clone((300, 300), 0isize);
+    let mut grid = Grid::new_clone(p2(300, 300), 0isize);
+    let mut integral_image = Grid::new_clone(p2(300, 300), 0isize);
 
     for x in 0..300 {
         let mut row = 0;
         for y in 0..300 {
             let power = power_level(serial, x + 1, y + 1);
-            grid[(x, y)] = power;
+            grid[p2(x, y)] = power;
             row += power;
-            integral_image[(x, y)] = row + if x > 0 { integral_image[(x - 1, y)] } else { 0 };
+            integral_image[p2(x, y)] = row
+                + if x > 0 {
+                    integral_image[p2(x - 1, y)]
+                } else {
+                    0
+                };
         }
     }
 
@@ -38,15 +43,15 @@ pub fn run() {
     for size in 1..=300isize {
         for x in 0..=300 - size {
             for y in 0..=300 - size {
-                let mut power = integral_image[(x + size - 1, y + size - 1)];
+                let mut power = integral_image[p2(x + size - 1, y + size - 1)];
                 if x > 0 {
-                    power -= integral_image[(x - 1, y + size - 1)];
+                    power -= integral_image[p2(x - 1, y + size - 1)];
                     if y > 0 {
-                        power += integral_image[(x - 1, y - 1)]
+                        power += integral_image[p2(x - 1, y - 1)]
                     }
                 }
                 if y > 0 {
-                    power -= integral_image[(x + size - 1, y - 1)]
+                    power -= integral_image[p2(x + size - 1, y - 1)]
                 }
 
                 if power > max_power {
@@ -69,14 +74,14 @@ pub fn part_one() {
 
     let serial = parse(input);
 
-    let mut grid = Grid::new_clone((300, 300), 0isize);
+    let mut grid = Grid::new_clone(p2(300, 300), 0isize);
 
     for x in 0..300 {
         for y in 0..300 {
             let power = power_level(serial, x + 1, y + 1);
             for px in (x - 2).max(0)..=x {
                 for py in (y - 2).max(0)..=y {
-                    grid[(px, py)] += power;
+                    grid[p2(px, py)] += power;
                 }
             }
         }
@@ -84,9 +89,9 @@ pub fn part_one() {
 
     let (x, y) = grid
         .grid_iter_index()
-        .filter(|((x, y), _)| *x < 297 && *y < 297)
+        .filter(|(p, _)| p.x < 297 && p.y < 297)
         .max_by_key(|(_, v)| *v)
-        .map(|((x, y), _)| (x + 1, y + 1))
+        .map(|(p, _)| (p.x + 1, p.y + 1))
         .unwrap();
 
     println!("{},{}", x, y);

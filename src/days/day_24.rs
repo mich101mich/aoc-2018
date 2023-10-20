@@ -1,47 +1,24 @@
 use crate::utils::*;
 
 #[derive(Debug, Clone)]
-struct Unit {
-    count: usize,
-    hp: usize,
-    attack: usize,
-    attack_type: String,
-    initiative: usize,
+struct Specials {
     immunities: HashSet<String>,
     weaknesses: HashSet<String>,
 }
-
-impl Unit {
-    pub fn effective_power(&self) -> usize {
-        self.count * self.attack
-    }
+impl RegexRepresentation for Specials {
+    const REGEX: &'static str = r".*?";
 }
-
-impl std::str::FromStr for Unit {
-    type Err = ();
+impl FromStr for Specials {
+    type Err = std::convert::Infallible;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (count, hp, specials, attack, attack_type, initiative) = scanf!(s,
-            "{} units each with {} hit points{}with an attack that does {} {} damage at initiative {}",
-            usize, usize, String, usize, String, usize
-        ).ok_or(())?;
-
-        let mut ret = Unit {
-            count,
-            hp,
-            attack,
-            attack_type: attack_type.to_string(),
-            initiative,
+        let mut ret = Specials {
             immunities: HashSet::new(),
             weaknesses: HashSet::new(),
         };
-        let s = if let Some(s) = specials
-            .strip_prefix(" (")
-            .and_then(|s| s.strip_suffix(") "))
-        {
-            s
-        } else {
+        if s.is_empty() {
             return Ok(ret);
-        };
+        }
+        let s = s.strip_prefix('(').unwrap().strip_suffix(") ").unwrap();
         for s in s.split("; ") {
             if let Some(s) = s.strip_prefix("immune to ") {
                 ret.immunities.extend(s.split(", ").map(|s| s.to_string()));
@@ -52,6 +29,31 @@ impl std::str::FromStr for Unit {
             }
         }
         Ok(ret)
+    }
+}
+
+#[derive(Debug, Clone, FromScanf)]
+#[sscanf(
+    format = "{count} units each with {hp} hit points {specials}with an attack that does {attack} {attack_type} damage at initiative {initiative}"
+)]
+struct Unit {
+    count: usize,
+    hp: usize,
+    attack: usize,
+    attack_type: String,
+    initiative: usize,
+    specials: Specials,
+}
+
+impl Unit {
+    pub fn effective_power(&self) -> usize {
+        self.count * self.attack
+    }
+    pub fn weak_to(&self, attack_type: &str) -> bool {
+        self.specials.weaknesses.contains(attack_type)
+    }
+    pub fn immune_to(&self, attack_type: &str) -> bool {
+        self.specials.immunities.contains(attack_type)
     }
 }
 
@@ -73,10 +75,10 @@ fn simulate(mut immune: Vec<Unit>, mut infection: Vec<Unit>) -> (usize, usize) {
             let target = all_units
                 .iter()
                 .filter(|(j, b, _)| *b != is_immune && !selected.contains(&(*j, *b)))
-                .filter(|(_, _, u)| !u.immunities.contains(&unit.attack_type))
+                .filter(|(_, _, u)| !u.immune_to(&unit.attack_type))
                 .map(|(j, _, u)| {
                     let mut damage = power;
-                    if u.weaknesses.contains(&unit.attack_type) {
+                    if u.weak_to(&unit.attack_type) {
                         damage *= 2;
                     }
                     (j, damage, u.effective_power(), u.initiative)
@@ -104,7 +106,7 @@ fn simulate(mut immune: Vec<Unit>, mut infection: Vec<Unit>) -> (usize, usize) {
                 (&infection[i], &mut immune[j])
             };
             let mut damage = unit.effective_power();
-            if target.weaknesses.contains(&unit.attack_type) {
+            if target.weak_to(&unit.attack_type) {
                 damage *= 2;
             }
             let defeated = (damage / target.hp).min(target.count);
@@ -134,11 +136,11 @@ pub fn run() {
     let base_immune = iter
         .by_ref()
         .take_while(|l| !l.is_empty())
-        .map(|l| Unit::from_str(l).unwrap())
+        .map(|l| sscanf!(l, "{Unit}").unwrap())
         .to_vec();
 
     iter.next().unwrap(); // intro text
-    let base_infection = iter.map(|l| Unit::from_str(l).unwrap()).to_vec();
+    let base_infection = iter.map(|l| sscanf!(l, "{Unit}").unwrap()).to_vec();
 
     let boost = binary_search(0, |boost| {
         let mut immune = base_immune.clone();
@@ -151,7 +153,7 @@ pub fn run() {
     });
 
     let mut immune = base_immune.clone();
-    let mut infection = base_infection.clone();
+    let mut infection = base_infection;
     immune.iter_mut().for_each(|u| u.attack += boost);
 
     let (immune_count, _) = simulate(immune, infection);
@@ -169,11 +171,11 @@ pub fn part_one() {
     let mut immune = iter
         .by_ref()
         .take_while(|l| !l.is_empty())
-        .map(|l| Unit::from_str(l).unwrap())
+        .map(|l| sscanf!(l, "{Unit}").unwrap())
         .to_vec();
 
     iter.next().unwrap(); // intro text
-    let mut infection = iter.map(|l| Unit::from_str(l).unwrap()).to_vec();
+    let mut infection = iter.map(|l| sscanf!(l, "{Unit}").unwrap()).to_vec();
 
     let (a, b) = simulate(immune, infection);
 

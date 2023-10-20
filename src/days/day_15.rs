@@ -38,7 +38,7 @@ pub fn run() {
                 .map(|p| (*p, true))
                 .chain(goblins.keys().map(|p| (*p, false)))
                 .to_vec();
-            entities.sort_by(|(a, _), (b, _)| a.1.cmp(&b.1).then(a.0.cmp(&b.0)));
+            entities.sort_by(|(a, _), (b, _)| a.y.cmp(&b.y).then(a.x.cmp(&b.x)));
             let mut killed = HashSet::<Point>::new();
             for (pos, is_elf) in entities.iter_mut() {
                 if killed.contains(pos) {
@@ -96,10 +96,10 @@ pub fn run() {
                             path_a
                                 .cost
                                 .cmp(&path_b.cost)
-                                .then(goal_a.1.cmp(&goal_b.1))
-                                .then(goal_a.0.cmp(&goal_b.0))
-                                .then(pos_a.1.cmp(&pos_b.1))
-                                .then(pos_a.0.cmp(&pos_b.0))
+                                .then(goal_a.y.cmp(&goal_b.y))
+                                .then(goal_a.x.cmp(&goal_b.x))
+                                .then(pos_a.y.cmp(&pos_b.y))
+                                .then(pos_a.x.cmp(&pos_b.x))
                         });
                     if let Some((next, _, _)) = path {
                         let hits = own_faction.remove(pos).unwrap();
@@ -167,7 +167,7 @@ pub fn part_one() {
             .map(|p| (*p, true))
             .chain(goblins.keys().map(|p| (*p, false)))
             .to_vec();
-        entities.sort_by(|(a, _), (b, _)| a.1.cmp(&b.1).then(a.0.cmp(&b.0)));
+        entities.sort_by(|(a, _), (b, _)| a.y.cmp(&b.y).then(a.x.cmp(&b.x)));
         let mut killed = HashSet::<Point>::new();
         for (pos, is_elf) in entities.iter_mut() {
             if killed.contains(pos) {
@@ -225,10 +225,10 @@ pub fn part_one() {
                         path_a
                             .cost
                             .cmp(&path_b.cost)
-                            .then(goal_a.1.cmp(&goal_b.1))
-                            .then(goal_a.0.cmp(&goal_b.0))
-                            .then(pos_a.1.cmp(&pos_b.1))
-                            .then(pos_a.0.cmp(&pos_b.0))
+                            .then(goal_a.y.cmp(&goal_b.y))
+                            .then(goal_a.x.cmp(&goal_b.x))
+                            .then(pos_a.y.cmp(&pos_b.y))
+                            .then(pos_a.x.cmp(&pos_b.x))
                     });
                 if let Some((next, _, _)) = path {
                     let hits = own_faction.remove(pos).unwrap();

@@ -1,6 +1,24 @@
 use crate::utils::*;
 use std::ops::DerefMut;
 
+#[derive(Debug, Clone, Copy, FromScanf)]
+#[sscanf(format_unescaped = r"position=<\s*{x}, \s*{y}> velocity=<\s*{vx}, \s*{vy}>")]
+struct Point {
+    x: isize,
+    y: isize,
+    vx: isize,
+    vy: isize,
+}
+impl Point {
+    fn next(&self) -> Self {
+        Self {
+            x: self.x + self.vx,
+            y: self.y + self.vy,
+            ..*self
+        }
+    }
+}
+
 #[allow(unused)]
 pub fn run() {
     #[allow(unused_variables)]
@@ -8,17 +26,7 @@ pub fn run() {
 
     let mut parsed = input
         .lines()
-        .map(|l| {
-            scanf_unescaped!(
-                l,
-                r"position=<\s*{}, \s*{}> velocity=<\s*{}, \s*{}>",
-                isize,
-                isize,
-                isize,
-                isize
-            )
-            .unwrap()
-        })
+        .map(|l| sscanf!(l, "{Point}").unwrap())
         .to_vec();
 
     let mut next = parsed.clone();
@@ -27,11 +35,10 @@ pub fn run() {
     for time in 0.. {
         let mut min_y = isize::MAX;
         let mut max_y = isize::MIN;
-        for ((x, y, vx, vy), (tx, ty, ..)) in parsed.iter().zip(next.iter_mut()) {
-            *tx = *x + *vx;
-            *ty = *y + *vy;
-            min_y = min_y.min(*ty);
-            max_y = max_y.max(*ty);
+        for (cur, next) in parsed.iter().zip(next.iter_mut()) {
+            *next = cur.next();
+            min_y = min_y.min(next.y);
+            max_y = max_y.max(next.y);
         }
         let height = max_y - min_y;
         if height <= min_height {
@@ -51,17 +58,7 @@ pub fn part_one() {
 
     let mut parsed = input
         .lines()
-        .map(|l| {
-            scanf_unescaped!(
-                l,
-                r"position=<\s*{}, \s*{}> velocity=<\s*{}, \s*{}>",
-                isize,
-                isize,
-                isize,
-                isize
-            )
-            .unwrap()
-        })
+        .map(|l| sscanf!(l, "{Point}").unwrap())
         .to_vec();
 
     let mut next = parsed.clone();
@@ -70,11 +67,10 @@ pub fn part_one() {
     loop {
         let mut min_y = isize::MAX;
         let mut max_y = isize::MIN;
-        for ((x, y, vx, vy), (tx, ty, ..)) in parsed.iter().zip(next.iter_mut()) {
-            *tx = *x + *vx;
-            *ty = *y + *vy;
-            min_y = min_y.min(*ty);
-            max_y = max_y.max(*ty);
+        for (cur, next) in parsed.iter().zip(next.iter_mut()) {
+            *next = cur.next();
+            min_y = min_y.min(next.y);
+            max_y = max_y.max(next.y);
         }
         let height = max_y - min_y;
         if height <= min_height {
@@ -87,13 +83,13 @@ pub fn part_one() {
 
     let (min_x, min_y, max_x) = parsed.iter().fold(
         (isize::MAX, isize::MAX, isize::MIN),
-        |(min_x, min_y, max_x), (x, y, ..)| (min_x.min(*x), min_y.min(*y), max_x.max(*x)),
+        |(min_x, min_y, max_x), p| (min_x.min(p.x), min_y.min(p.y), max_x.max(p.x)),
     );
     let width = max_x - min_x;
 
-    let mut display = Grid::new_clone((width as usize + 1, min_height as usize + 1), false);
-    for (x, y, ..) in parsed.iter() {
-        display[((x - min_x) as usize, (y - min_y) as usize)] = true;
+    let mut display = Grid::new_clone(p2(width as usize + 1, min_height as usize + 1), false);
+    for p in parsed.iter() {
+        display[p2((p.x - min_x) as usize, (p.y - min_y) as usize)] = true;
     }
     display.print('#', ' ');
 }

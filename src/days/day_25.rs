@@ -13,12 +13,8 @@ pub fn part_one() {
 
     let points: Vec<Point4d> = input
         .lines()
-        .map(|line| {
-            line.split(',')
-                .map(|s| s.parse().unwrap())
-                .collect::<Vec<isize>>()
-        })
-        .map(|x| [x[0], x[1], x[2], x[3]])
+        .filter_map(|line| sscanf!(line, "{0},{0},{0},{0}", isize).ok())
+        .map(|(a, b, c, d)| [a, b, c, d])
         .to_vec();
 
     let mut constellations: Vec<Vec<Point4d>> = vec![];

@@ -3,10 +3,10 @@
 #[macro_use]
 mod utils;
 mod days {
-    pub mod day_25;
+    pub mod day_13;
 }
-use days::day_25;
+use days::day_13;
 
 fn main() {
-    day_25::part_one();
+    day_13::part_one();
 }

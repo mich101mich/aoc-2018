@@ -19,7 +19,7 @@ fn visit(
                 break;
             }
             'N' | 'E' | 'S' | 'W' => {
-                let dir = Dir::from(c);
+                let dir = Dir::from_str(&c.to_string()).unwrap();
                 let num = dir.num();
                 let opp = dir.opposite().num();
                 for pos in positions.iter_mut() {
@@ -34,11 +34,12 @@ fn visit(
         }
     }
     if !alternatives.is_empty() {
-        for mut alt in alternatives {
-            positions.append(&mut alt);
+        let mut deduped = positions.iter().copied().to_set();
+        for alt in alternatives.into_iter() {
+            deduped.extend(alt.into_iter());
         }
-        positions.sort_unstable();
-        positions.dedup();
+        positions.clear();
+        positions.extend(deduped);
     }
 }
 
@@ -50,7 +51,7 @@ pub fn run() {
     let parsed = input.strip_prefix('^').unwrap().strip_suffix('$').unwrap();
 
     let mut possible = HashMap::new();
-    visit(&mut parsed.chars(), &mut vec![(0, 0)], &mut possible);
+    visit(&mut parsed.chars(), &mut vec![p2(0, 0)], &mut possible);
 
     let all_rooms = possible.keys().copied().to_vec();
     let paths = dijkstra_search(
@@ -61,7 +62,7 @@ pub fn run() {
                 }
             }
         },
-        (0, 0),
+        p2(0, 0),
         &all_rooms,
     );
     let count = paths.values().filter(|p| p.cost >= 1000).count();
@@ -76,7 +77,7 @@ pub fn part_one() {
     let parsed = input.strip_prefix('^').unwrap().strip_suffix('$').unwrap();
 
     let mut possible = HashMap::new();
-    visit(&mut parsed.chars(), &mut vec![(0, 0)], &mut possible);
+    visit(&mut parsed.chars(), &mut vec![p2(0, 0)], &mut possible);
 
     let all_rooms = possible.keys().copied().to_vec();
     let paths = dijkstra_search(
@@ -87,7 +88,7 @@ pub fn part_one() {
                 }
             }
         },
-        (0, 0),
+        p2(0, 0),
         &all_rooms,
     );
     let longest = paths.values().map(|p| p.cost).max().unwrap();

@@ -6,11 +6,9 @@ pub fn run() {
     let input = include_str!("../input/07.txt");
 
     let parsed = input.lines().map(|l| {
-        scanf!(
+        sscanf!(
             l,
-            "Step {} must be finished before step {} can begin.",
-            char,
-            char
+            "Step {char} must be finished before step {char} can begin."
         )
         .unwrap()
     });
@@ -59,11 +57,9 @@ pub fn part_one() {
     let input = include_str!("../input/07.txt");
 
     let parsed = input.lines().map(|l| {
-        scanf!(
+        sscanf!(
             l,
-            "Step {} must be finished before step {} can begin.",
-            char,
-            char
+            "Step {char} must be finished before step {char} can begin."
         )
         .unwrap()
     });

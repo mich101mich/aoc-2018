@@ -8,11 +8,13 @@ pub fn run() {
     // target: 10,10";
 
     let mut iter = input.lines();
-    let depth = scanf!(iter.next().unwrap(), "depth: {}", usize).unwrap();
-    let target = scanf!(iter.next().unwrap(), "target: {},{}", usize, usize).unwrap();
+    let depth = sscanf!(iter.next().unwrap(), "depth: {usize}").unwrap();
+    let target = sscanf!(iter.next().unwrap(), "target: {usize},{usize}").unwrap();
+    let target = p2(target.0, target.1);
 
-    let mut grid = Grid::<u8>::new_default((target.0 * 4, target.1 * 2));
-    let (w, h) = grid.size();
+    let mut grid = Grid::<u8>::new_default(p2(target.x * 4, target.y * 2));
+    let w = grid.size().x;
+    let h = grid.size().y;
     let mut prev_row = vec![0; w];
     for (y, row) in grid.iter_mut().enumerate() {
         let mut prev_val = 0;
@@ -21,7 +23,7 @@ pub fn run() {
                 x * 16807
             } else if x == 0 {
                 y * 48271
-            } else if (x, y) == target {
+            } else if p2(x, y) == target {
                 0
             } else {
                 prev_val * *prev_row
@@ -53,7 +55,7 @@ pub fn run() {
                 }
             }
         },
-        ((0, 0), TORCH),
+        (p2(0, 0), TORCH),
         (target, TORCH),
         |(p, e)| neighbors.heuristic(p, target) + (e != TORCH) as usize * 7,
     )
@@ -68,11 +70,12 @@ pub fn part_one() {
     let input = include_str!("../input/22.txt");
 
     let mut iter = input.lines();
-    let depth = scanf!(iter.next().unwrap(), "depth: {}", usize).unwrap();
-    let target = scanf!(iter.next().unwrap(), "target: {},{}", usize, usize).unwrap();
+    let depth = sscanf!(iter.next().unwrap(), "depth: {usize}").unwrap();
+    let target = sscanf!(iter.next().unwrap(), "target: {usize},{usize}").unwrap();
 
-    let mut grid = Grid::<u8>::new_default((target.0 + 1, target.1 + 1));
-    let (w, h) = grid.size();
+    let mut grid = Grid::<u8>::new_default(p2(target.0 + 1, target.1 + 1));
+    let w = grid.size().x;
+    let h = grid.size().y;
     let mut prev_row = vec![0; w];
     for (y, row) in grid.iter_mut().enumerate() {
         let mut prev_val = 0;

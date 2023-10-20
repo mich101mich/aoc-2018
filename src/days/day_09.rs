@@ -14,11 +14,9 @@ pub fn run() {
     #[allow(unused_variables)]
     let input = include_str!("../input/09.txt");
 
-    let (players, mut last_marble) = scanf!(
+    let (players, mut last_marble) = sscanf!(
         input,
-        "{} players; last marble is worth {} points",
-        usize,
-        usize
+        "{usize} players; last marble is worth {usize} points"
     )
     .unwrap();
 
@@ -50,11 +48,9 @@ pub fn part_one() {
     #[allow(unused_variables)]
     let input = include_str!("../input/09.txt");
 
-    let (players, last_marble) = scanf!(
+    let (players, last_marble) = sscanf!(
         input,
-        "{} players; last marble is worth {} points",
-        usize,
-        usize
+        "{usize} players; last marble is worth {usize} points"
     )
     .unwrap();
 

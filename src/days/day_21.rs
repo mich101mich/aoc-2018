@@ -1,53 +1,39 @@
 use crate::utils::*;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum Opcode {
-    Add(bool),
-    Mul(bool),
-    Ban(bool),
-    Bor(bool),
-    Set(bool),
-    Gt(bool, bool),
-    Eq(bool, bool),
-}
-use Opcode::*;
-impl std::str::FromStr for Opcode {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let chars = s.chars().to_vec();
-        let a = chars[2] == 'r';
-        let b = chars[3] == 'r';
-        let op = match &s[..2] {
-            "ad" => Add(b),
-            "mu" => Mul(b),
-            "ba" => Ban(b),
-            "bo" => Bor(b),
-            "se" => Set(b),
-            "gt" => Gt(a, b),
-            "eq" => Eq(a, b),
-            _ => return Err(format!("Unknown opcode: {}", s)),
-        };
-        Ok(op)
-    }
+#[derive(Clone, Copy, Debug, Eq, PartialEq, FromScanf)]
+enum Reg {
+    #[sscanf(format = "r")]
+    Register,
+    #[sscanf(format = "i")]
+    Immediate,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, FromScanf)]
+enum Opcode {
+    #[sscanf(format = "add{}")]
+    Add(Reg),
+    #[sscanf(format = "mul{}")]
+    Mul(Reg),
+    #[sscanf(format = "ban{}")]
+    Ban(Reg),
+    #[sscanf(format = "bor{}")]
+    Bor(Reg),
+    #[sscanf(format = "set{}")]
+    Set(Reg),
+    #[sscanf(format = "gt{}{}")]
+    Gt(Reg, Reg),
+    #[sscanf(format = "eq{}{}")]
+    Eq(Reg, Reg),
+}
+use Opcode::*;
+
+#[derive(FromScanf)]
+#[sscanf(format = "{opcode} {a} {b} {c}")]
 struct Instruction {
     pub opcode: Opcode,
     pub a: usize,
     pub b: usize,
     pub c: usize,
-}
-impl std::str::FromStr for Instruction {
-    type Err = std::num::ParseIntError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut iter = s.split(' ');
-        Ok(Instruction {
-            opcode: iter.next().unwrap().parse().unwrap(),
-            a: iter.next().unwrap().parse()?,
-            b: iter.next().unwrap().parse()?,
-            c: iter.next().unwrap().parse()?,
-        })
-    }
 }
 
 // taken from print_code and manually optimized
@@ -102,12 +88,12 @@ pub fn part_one() {
 #[allow(unused)]
 fn print_code(input: &str) {
     let mut iter = input.lines();
-    let ip_reg = scanf!(iter.next().unwrap(), "#ip {}", usize).unwrap();
-    let instructions = iter.map(|l| l.parse::<Instruction>().unwrap()).to_vec();
+    let ip_reg = sscanf!(iter.next().unwrap(), "#ip {usize}").unwrap();
+    let instructions = iter.map(|l| sscanf!(l, "{Instruction}").unwrap()).to_vec();
 
     for (i, instr) in instructions.iter().enumerate() {
-        let to_str = |x: usize, r| {
-            if r {
+        let to_str = |x: usize, r: Reg| {
+            if r == Reg::Register {
                 if x == ip_reg {
                     i.to_string()
                 } else {
@@ -121,8 +107,8 @@ fn print_code(input: &str) {
         print!("{:>3}: ", i);
 
         let (a, b, c) = (instr.a, instr.b, instr.c);
-        let c_reg = to_str(c, true);
-        let a_reg = to_str(a, true);
+        let c_reg = to_str(c, Reg::Register);
+        let a_reg = to_str(a, Reg::Register);
 
         match instr.opcode {
             Add(r) => {

@@ -65,9 +65,7 @@ pub fn part_one() {
         if matching {
             parsed.remove(i);
             parsed.remove(i);
-            if i > 0 {
-                i -= 1;
-            }
+            i.saturating_sub(1);
         } else {
             i += 1;
         }

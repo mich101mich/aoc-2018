@@ -16,7 +16,7 @@ pub fn run() {
     let mut carts = grid
         .grid_iter_index()
         .filter(|(_, c)| matches!(c, '^' | 'v' | '<' | '>'))
-        .map(|(p, c)| (p, Dir::from(*c), 0))
+        .map(|(p, c)| (p, Dir::from_str(&c.to_string()).unwrap(), 0))
         .to_vec();
 
     for (p, d, _) in &carts {
@@ -32,7 +32,7 @@ pub fn run() {
     for tick in 0.. {
         positions.clear();
         remove.clear();
-        carts.sort_by(|(p1, _, _), (p2, _, _)| p1.1.cmp(&p2.1).then(p1.0.cmp(&p2.0)));
+        carts.sort_by(|(p1, _, _), (p2, _, _)| p1.y.cmp(&p2.y).then(p1.x.cmp(&p2.x)));
         for (p, d, turn) in &mut carts {
             if remove.contains(p) {
                 continue;
@@ -67,7 +67,7 @@ pub fn run() {
         carts.retain(|(p, _, _)| !remove.contains(p));
         if carts.len() == 1 {
             let p = carts[0].0;
-            println!("{},{}", p.0, p.1);
+            println!("{},{}", p.x, p.y);
             break;
         }
     }
@@ -82,7 +82,7 @@ pub fn part_one() {
     let mut carts = grid
         .grid_iter_index()
         .filter(|(_, c)| matches!(c, '^' | 'v' | '<' | '>'))
-        .map(|(p, c)| (p, Dir::from(*c), 0))
+        .map(|(p, c)| (p, Dir::from_str(&c.to_string()).unwrap(), 0))
         .to_vec();
 
     for (p, d, _) in &carts {
@@ -98,7 +98,7 @@ pub fn part_one() {
         for (p, d, turn) in &mut carts {
             *p += *d;
             if !positions.insert(*p) {
-                println!("{},{}", p.0, p.1);
+                println!("{},{}", p.x, p.y);
                 return;
             }
 

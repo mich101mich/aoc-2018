@@ -21,10 +21,10 @@ pub fn run() {
     let parsed = input
         .lines()
         .map(|l| {
-            if let Some((x, y1, y2)) = scanf!(l, "x={}, y={}..{}", usize, usize, usize) {
+            if let Ok((x, y1, y2)) = sscanf!(l, "x={usize}, y={usize}..{usize}") {
                 (x..=x, y1..=y2)
             } else {
-                let (y, x1, x2) = scanf!(l, "y={}, x={}..{}", usize, usize, usize).unwrap();
+                let (y, x1, x2) = sscanf!(l, "y={usize}, x={usize}..{usize}").unwrap();
                 (x1..=x2, y..=y)
             }
         })
@@ -38,69 +38,69 @@ pub fn run() {
     w += 10;
     h += 1;
 
-    let mut grid = Grid::new_clone((w, h), Tile::Empty);
+    let mut grid = Grid::new_clone(p2(w, h), Tile::Empty);
     for (rx, ry) in parsed {
         for x in rx {
             for y in ry.clone() {
-                grid[(x, y)] = Tile::Wall;
+                grid[p2(x, y)] = Tile::Wall;
             }
         }
     }
-    let mut flowing = vec![(500, 0)];
+    let mut flowing = vec![p2(500, 0)];
     let mut still_water = 0;
     grid[flowing[0]] = Tile::FlowingWater;
 
-    while let Some((x, y)) = flowing.pop() {
-        if y == h - 1 {
+    while let Some(p) = flowing.pop() {
+        if p.y == h - 1 {
             continue;
         }
-        if grid[(x, y)] != Tile::FlowingWater {
+        if grid[p] != Tile::FlowingWater {
             continue;
         }
-        match grid[(x, y + 1)] {
+        match grid[p + Dir::Down] {
             Tile::Empty => {
-                flowing.push((x, y));
-                for ty in y + 1..h {
-                    let tile = &mut grid[(x, ty)];
+                flowing.push(p);
+                for pt in (p.y + 1..h).map(|y| p2(p.x, y)) {
+                    let tile = &mut grid[pt];
                     if *tile != Tile::Empty {
                         break;
                     }
                     *tile = Tile::FlowingWater;
-                    flowing.push((x, ty));
+                    flowing.push(pt);
                 }
             }
             t if t.is_solid() => {
                 let mut left_closed = false;
                 let mut right_closed = false;
 
-                let mut start_x = x;
-                while start_x > 0 {
-                    if !grid[(start_x, y + 1)].is_solid() {
-                        grid[(start_x, y)] = Tile::FlowingWater;
-                        flowing.push((start_x, y));
+                let mut start = p;
+                while start.x > 0 {
+                    if !grid[start + Dir::Down].is_solid() {
+                        grid[start] = Tile::FlowingWater;
+                        flowing.push(start);
                         break;
-                    } else if grid[(start_x - 1, y)] == Tile::Wall {
+                    } else if grid[start + Dir::Left] == Tile::Wall {
                         left_closed = true;
                         break;
                     }
-                    start_x -= 1;
+                    start += Dir::Left;
                 }
-                let mut end_x = x;
-                while end_x < w - 1 {
-                    if !grid[(end_x, y + 1)].is_solid() {
-                        grid[(end_x, y)] = Tile::FlowingWater;
-                        flowing.push((end_x, y));
+                let mut end = p;
+                while end.x < w - 1 {
+                    if !grid[end + Dir::Down].is_solid() {
+                        grid[end] = Tile::FlowingWater;
+                        flowing.push(end);
                         break;
-                    } else if grid[(end_x + 1, y)] == Tile::Wall {
+                    } else if grid[end + Dir::Right] == Tile::Wall {
                         right_closed = true;
                         break;
                     }
-                    end_x += 1;
+                    end += Dir::Right;
                 }
 
                 if left_closed && right_closed {
-                    grid[y][start_x..=end_x].fill(Tile::StillWater);
-                    still_water += end_x - start_x + 1;
+                    grid[p.y][start.x..=end.x].fill(Tile::StillWater);
+                    still_water += end.x - start.x + 1;
                 }
             }
             _ => {}
@@ -118,10 +118,10 @@ pub fn part_one() {
     let parsed = input
         .lines()
         .map(|l| {
-            if let Some((x, y1, y2)) = scanf!(l, "x={}, y={}..{}", usize, usize, usize) {
+            if let Ok((x, y1, y2)) = sscanf!(l, "x={usize}, y={usize}..{usize}") {
                 (x..=x, y1..=y2)
             } else {
-                let (y, x1, x2) = scanf!(l, "y={}, x={}..{}", usize, usize, usize).unwrap();
+                let (y, x1, x2) = sscanf!(l, "y={usize}, x={usize}..{usize}").unwrap();
                 (x1..=x2, y..=y)
             }
         })
@@ -135,71 +135,68 @@ pub fn part_one() {
     w += 10;
     h += 1;
 
-    let mut grid = Grid::new_clone((w, h), Tile::Empty);
+    let mut grid = Grid::new_clone(p2(w, h), Tile::Empty);
     for (rx, ry) in parsed {
         for x in rx {
             for y in ry.clone() {
-                grid[(x, y)] = Tile::Wall;
+                grid[p2(x, y)] = Tile::Wall;
             }
         }
     }
     let mut flowing = HashSet::<Point>::new();
-    flowing.insert((500, 0));
-    grid[(500usize, 0)] = Tile::FlowingWater;
+    flowing.insert(p2(500, 0));
+    grid[p2(500usize, 0)] = Tile::FlowingWater;
 
     let mut change = true;
     while change {
         change = false;
         let mut new_flowing = HashSet::new();
         let mut remove_flowing = HashSet::new();
-        for &(x, y) in flowing.iter() {
-            if y == h - 1 {
+        for p in flowing.iter().copied() {
+            if p.y == h - 1 {
                 continue;
             }
-            if grid[(x, y)] != Tile::FlowingWater {
-                remove_flowing.insert((x, y));
+            if grid[p] != Tile::FlowingWater {
+                remove_flowing.insert(p);
                 continue;
             }
-            match grid[(x, y + 1)] {
+            match grid[p + Dir::Down] {
                 Tile::Empty => {
-                    for ty in y + 1..h {
-                        let tile = &mut grid[(x, ty)];
+                    for pt in (p.y + 1..h).map(|y| p2(p.x, y)) {
+                        let tile = &mut grid[pt];
                         if *tile != Tile::Empty {
                             break;
                         }
                         *tile = Tile::FlowingWater;
-                        new_flowing.insert((x, ty));
+                        new_flowing.insert(pt);
                     }
                     change = true;
                 }
                 t if t.is_solid() => {
-                    let mut start_x = x;
-                    while start_x > 0
-                        && !grid[(start_x - 1, y)].is_solid()
-                        && grid[(start_x, y + 1)].is_solid()
+                    let mut start = p;
+                    while start.x > 0
+                        && !grid[start + Dir::Left].is_solid()
+                        && grid[start + Dir::Down].is_solid()
                     {
-                        start_x -= 1;
+                        start += Dir::Left;
                     }
-                    let mut end_x = x;
-                    while end_x < w - 1
-                        && !grid[(end_x + 1, y)].is_solid()
-                        && grid[(end_x, y + 1)].is_solid()
+                    let mut end = p;
+                    while end.x < w - 1
+                        && !grid[end + Dir::Right].is_solid()
+                        && grid[end + Dir::Down].is_solid()
                     {
-                        end_x += 1;
+                        end += Dir::Right;
                     }
 
-                    if grid[(start_x - 1, y)] == Tile::Wall && grid[(end_x + 1, y)] == Tile::Wall {
-                        for tx in start_x..=end_x {
-                            grid[(tx, y)] = Tile::StillWater;
-                        }
+                    if grid[start + Dir::Left] == Tile::Wall && grid[end + Dir::Right] == Tile::Wall
+                    {
+                        grid[p.y][start.x..=end.x].fill(Tile::StillWater);
                     } else {
-                        for tx in start_x..=end_x {
-                            grid[(tx, y)] = Tile::FlowingWater;
-                        }
-                        new_flowing.insert((start_x, y));
-                        new_flowing.insert((end_x, y));
+                        grid[p.y][start.x..=end.x].fill(Tile::FlowingWater);
+                        new_flowing.insert(start);
+                        new_flowing.insert(end);
                     }
-                    remove_flowing.insert((x, y));
+                    remove_flowing.insert(p);
                     change = true;
                 }
                 _ => {}
@@ -215,7 +212,7 @@ pub fn part_one() {
 
     let cnt = grid
         .grid_iter_index()
-        .filter(|((_, y), _)| *y >= min_y)
+        .filter(|(p, _)| p.y >= min_y)
         .filter(|(_, t)| matches!(**t, Tile::StillWater | Tile::FlowingWater))
         .count();
     pv!(cnt);

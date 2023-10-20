@@ -12,6 +12,8 @@ enum Opcode {
 }
 use Opcode::*;
 
+#[derive(FromScanf)]
+#[sscanf(format = "{opcode} {a} {b} {c}")]
 struct Instruction {
     opcode: usize,
     a: usize,
@@ -38,21 +40,6 @@ impl Instruction {
         }
     }
 }
-impl std::str::FromStr for Instruction {
-    type Err = std::num::ParseIntError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut iter = s.split(' ');
-        Ok(Instruction {
-            opcode: iter.next().unwrap().parse()?,
-            a: iter.next().unwrap().parse()?,
-            b: iter.next().unwrap().parse()?,
-            c: iter.next().unwrap().parse()?,
-        })
-    }
-}
-impl RegexRepresentation for Instruction {
-    const REGEX: &'static str = r"\d+ \d+ \d+ \d+";
-}
 
 #[allow(unused)]
 pub fn run() {
@@ -72,13 +59,13 @@ pub fn run() {
         if line.is_empty() {
             break;
         }
-        let before = scanf!(line, "Before: [{}]", String)
+        let before = sscanf!(line, "Before: [{str}]")
             .unwrap()
             .split(", ")
             .map(parse_u)
             .to_vec();
-        let instr = Instruction::from_str(iter.next().unwrap()).unwrap();
-        let after = scanf!(iter.next().unwrap(), "After:  [{}]", String)
+        let instr = sscanf!(iter.next().unwrap(), "{Instruction}").unwrap();
+        let after = sscanf!(iter.next().unwrap(), "After:  [{str}]")
             .unwrap()
             .split(", ")
             .map(parse_u)
@@ -114,10 +101,7 @@ pub fn run() {
     pv!(mapping);
 
     iter.next().unwrap();
-    let program = iter
-        .map(Instruction::from_str)
-        .filter_map(|r| r.ok())
-        .to_vec();
+    let program = iter.map(|l| sscanf!(l, "{Instruction}").unwrap()).to_vec();
 
     let mut reg = [0; 4];
     for instr in &program {
@@ -143,13 +127,13 @@ pub fn part_one() {
         if line.is_empty() {
             break;
         }
-        let before = scanf!(line, "Before: [{}]", String)
+        let before = sscanf!(line, "Before: [{str}]")
             .unwrap()
             .split(", ")
             .map(parse_u)
             .to_vec();
-        let instr = Instruction::from_str(iter.next().unwrap()).unwrap();
-        let after = scanf!(iter.next().unwrap(), "After:  [{}]", String)
+        let instr = sscanf!(iter.next().unwrap(), "{Instruction}").unwrap();
+        let after = sscanf!(iter.next().unwrap(), "After:  [{str}]")
             .unwrap()
             .split(", ")
             .map(parse_u)

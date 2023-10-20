@@ -1,36 +1,42 @@
 use crate::utils::*;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum Opcode {
-    Add(bool),
-    Mul(bool),
-    Ban(bool),
-    Bor(bool),
-    Set(bool),
-    Gt(bool, bool),
-    Eq(bool, bool),
+#[derive(Clone, Copy, Debug, Eq, PartialEq, FromScanf)]
+enum Reg {
+    #[sscanf(format = "r")]
+    Register,
+    #[sscanf(format = "i")]
+    Immediate,
 }
-use Opcode::*;
-impl std::str::FromStr for Opcode {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let chars = s.chars().to_vec();
-        let a = chars[2] == 'r';
-        let b = chars[3] == 'r';
-        let op = match &s[..2] {
-            "ad" => Add(b),
-            "mu" => Mul(b),
-            "ba" => Ban(b),
-            "bo" => Bor(b),
-            "se" => Set(b),
-            "gt" => Gt(a, b),
-            "eq" => Eq(a, b),
-            _ => return Err(format!("Unknown opcode: {}", s)),
-        };
-        Ok(op)
+impl Reg {
+    fn get(&self, regs: &[usize], val: usize) -> usize {
+        match self {
+            Reg::Register => regs[val],
+            Reg::Immediate => val,
+        }
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, FromScanf)]
+enum Opcode {
+    #[sscanf(format = "add{}")]
+    Add(Reg),
+    #[sscanf(format = "mul{}")]
+    Mul(Reg),
+    #[sscanf(format = "ban{}")]
+    Ban(Reg),
+    #[sscanf(format = "bor{}")]
+    Bor(Reg),
+    #[sscanf(format = "set{}")]
+    Set(Reg),
+    #[sscanf(format = "gt{}{}")]
+    Gt(Reg, Reg),
+    #[sscanf(format = "eq{}{}")]
+    Eq(Reg, Reg),
+}
+use Opcode::*;
+
+#[derive(FromScanf)]
+#[sscanf(format = "{opcode} {a} {b} {c}")]
 struct Instruction {
     pub opcode: Opcode,
     pub a: usize,
@@ -40,33 +46,17 @@ struct Instruction {
 impl Instruction {
     fn execute(&self, reg: &mut [usize]) {
         let (a, b, c) = (self.a, self.b, self.c);
-        let get = |i, r| if r { reg[i] } else { i };
 
         match self.opcode {
-            Add(r) => reg[c] = reg[a] + get(b, r),
-            Mul(r) => reg[c] = reg[a] * get(b, r),
-            Ban(r) => reg[c] = reg[a] & get(b, r),
-            Bor(r) => reg[c] = reg[a] | get(b, r),
-            Set(r) => reg[c] = get(a, r),
-            Gt(r1, r2) => reg[c] = (get(a, r1) > get(b, r2)) as usize,
-            Eq(r1, r2) => reg[c] = (get(a, r1) == get(b, r2)) as usize,
+            Add(r) => reg[c] = reg[a] + r.get(reg, b),
+            Mul(r) => reg[c] = reg[a] * r.get(reg, b),
+            Ban(r) => reg[c] = reg[a] & r.get(reg, b),
+            Bor(r) => reg[c] = reg[a] | r.get(reg, b),
+            Set(r) => reg[c] = r.get(reg, a),
+            Gt(r1, r2) => reg[c] = (r1.get(reg, a) > r2.get(reg, b)) as usize,
+            Eq(r1, r2) => reg[c] = (r1.get(reg, a) == r2.get(reg, b)) as usize,
         }
     }
-}
-impl std::str::FromStr for Instruction {
-    type Err = std::num::ParseIntError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut iter = s.split(' ');
-        Ok(Instruction {
-            opcode: iter.next().unwrap().parse().unwrap(),
-            a: iter.next().unwrap().parse()?,
-            b: iter.next().unwrap().parse()?,
-            c: iter.next().unwrap().parse()?,
-        })
-    }
-}
-impl RegexRepresentation for Instruction {
-    const REGEX: &'static str = r"[a-z]+ \d+ \d+ \d+";
 }
 
 #[allow(unused)]
@@ -94,8 +84,8 @@ pub fn part_one() {
     // let input = ;
 
     let mut iter = input.lines();
-    let mut ip_reg = scanf!(iter.next().unwrap(), "#ip {}", usize).unwrap();
-    let mut instructions = iter.map(|l| l.parse::<Instruction>().unwrap()).to_vec();
+    let mut ip_reg = sscanf!(iter.next().unwrap(), "#ip {usize}").unwrap();
+    let mut instructions = iter.map(|l| sscanf!(l, "{Instruction}").unwrap()).to_vec();
 
     let mut reg = vec![0; 6];
     while let Some(instr) = instructions.get(reg[ip_reg]) {
@@ -107,89 +97,87 @@ pub fn part_one() {
 
 #[allow(unused)]
 fn print_code(input: &str) {
-    fn print_code(input: &str) {
-        let mut iter = input.lines();
-        let ip_reg = scanf!(iter.next().unwrap(), "#ip {}", usize).unwrap();
-        let instructions = iter.map(|l| l.parse::<Instruction>().unwrap()).to_vec();
+    let mut iter = input.lines();
+    let ip_reg = sscanf!(iter.next().unwrap(), "#ip {usize}").unwrap();
+    let instructions = iter.map(|l| sscanf!(l, "{Instruction}").unwrap()).to_vec();
 
-        for (i, instr) in instructions.iter().enumerate() {
-            let to_str = |x: usize, r| {
-                if r {
-                    if x == ip_reg {
-                        i.to_string()
-                    } else {
-                        format!("{}", (b'a' + x as u8) as char)
-                    }
+    for (i, instr) in instructions.iter().enumerate() {
+        let to_str = |x: usize, r: Reg| {
+            if r == Reg::Register {
+                if x == ip_reg {
+                    i.to_string()
                 } else {
-                    x.to_string()
+                    format!("{}", (b'a' + x as u8) as char)
                 }
-            };
-
-            print!("{:>3}: ", i);
-
-            let (a, b, c) = (instr.a, instr.b, instr.c);
-            let c_reg = to_str(c, true);
-            let a_reg = to_str(a, true);
-
-            match instr.opcode {
-                Add(r) => {
-                    if c == ip_reg {
-                        if a == ip_reg {
-                            println!("Jump by {} + 1", to_str(b, r));
-                        } else {
-                            println!("Jump to {} + {} + 1", a_reg, to_str(b, r));
-                        }
-                    } else if c_reg == a_reg {
-                        println!("{} += {}", c_reg, to_str(b, r));
-                    } else if c_reg == to_str(b, r) {
-                        println!("{} += {}", c_reg, a_reg);
-                    } else {
-                        println!("{} = {} + {}", c_reg, a_reg, to_str(b, r));
-                    }
-                }
-                Mul(r) => {
-                    if c == ip_reg {
-                        if a == ip_reg {
-                            println!("Jump to {} * {} + 1", i, to_str(b, r));
-                        } else {
-                            println!("Jump to {} * {} + 1", a_reg, to_str(b, r));
-                        }
-                    } else if c_reg == a_reg {
-                        println!("{} *= {}", c_reg, to_str(b, r));
-                    } else if c_reg == to_str(b, r) {
-                        println!("{} *= {}", c_reg, a_reg);
-                    } else {
-                        println!("{} = {} * {}", c_reg, a_reg, to_str(b, r));
-                    }
-                }
-                Ban(r) => {
-                    if c_reg == a_reg {
-                        println!("{} &= {}", c_reg, to_str(b, r));
-                    } else if c_reg == to_str(b, r) {
-                        println!("{} &= {}", c_reg, a_reg);
-                    } else {
-                        println!("{} = {} & {}", c_reg, a_reg, to_str(b, r));
-                    }
-                }
-                Bor(r) => {
-                    if c_reg == a_reg {
-                        println!("{} |= {}", c_reg, to_str(b, r));
-                    } else if c_reg == to_str(b, r) {
-                        println!("{} |= {}", c_reg, a_reg);
-                    } else {
-                        println!("{} = {} | {}", c_reg, a_reg, to_str(b, r));
-                    }
-                }
-                Set(r) => {
-                    if c == ip_reg {
-                        println!("Jump to {} + 1", to_str(a, r));
-                    } else {
-                        println!("{} = {}", c_reg, to_str(a, r));
-                    }
-                }
-                Gt(r1, r2) => println!("{} = {} > {}", c_reg, to_str(a, r1), to_str(b, r2)),
-                Eq(r1, r2) => println!("{} = {} == {}", c_reg, to_str(a, r1), to_str(b, r2)),
+            } else {
+                x.to_string()
             }
+        };
+
+        print!("{:>3}: ", i);
+
+        let (a, b, c) = (instr.a, instr.b, instr.c);
+        let c_reg = to_str(c, Reg::Register);
+        let a_reg = to_str(a, Reg::Register);
+
+        match instr.opcode {
+            Add(r) => {
+                if c == ip_reg {
+                    if a == ip_reg {
+                        println!("Jump by {} + 1", to_str(b, r));
+                    } else {
+                        println!("Jump to {} + {} + 1", a_reg, to_str(b, r));
+                    }
+                } else if c_reg == a_reg {
+                    println!("{} += {}", c_reg, to_str(b, r));
+                } else if c_reg == to_str(b, r) {
+                    println!("{} += {}", c_reg, a_reg);
+                } else {
+                    println!("{} = {} + {}", c_reg, a_reg, to_str(b, r));
+                }
+            }
+            Mul(r) => {
+                if c == ip_reg {
+                    if a == ip_reg {
+                        println!("Jump to {} * {} + 1", i, to_str(b, r));
+                    } else {
+                        println!("Jump to {} * {} + 1", a_reg, to_str(b, r));
+                    }
+                } else if c_reg == a_reg {
+                    println!("{} *= {}", c_reg, to_str(b, r));
+                } else if c_reg == to_str(b, r) {
+                    println!("{} *= {}", c_reg, a_reg);
+                } else {
+                    println!("{} = {} * {}", c_reg, a_reg, to_str(b, r));
+                }
+            }
+            Ban(r) => {
+                if c_reg == a_reg {
+                    println!("{} &= {}", c_reg, to_str(b, r));
+                } else if c_reg == to_str(b, r) {
+                    println!("{} &= {}", c_reg, a_reg);
+                } else {
+                    println!("{} = {} & {}", c_reg, a_reg, to_str(b, r));
+                }
+            }
+            Bor(r) => {
+                if c_reg == a_reg {
+                    println!("{} |= {}", c_reg, to_str(b, r));
+                } else if c_reg == to_str(b, r) {
+                    println!("{} |= {}", c_reg, a_reg);
+                } else {
+                    println!("{} = {} | {}", c_reg, a_reg, to_str(b, r));
+                }
+            }
+            Set(r) => {
+                if c == ip_reg {
+                    println!("Jump to {} + 1", to_str(a, r));
+                } else {
+                    println!("{} = {}", c_reg, to_str(a, r));
+                }
+            }
+            Gt(r1, r2) => println!("{} = {} > {}", c_reg, to_str(a, r1), to_str(b, r2)),
+            Eq(r1, r2) => println!("{} = {} == {}", c_reg, to_str(a, r1), to_str(b, r2)),
         }
     }
 }

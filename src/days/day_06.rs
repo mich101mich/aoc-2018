@@ -6,7 +6,8 @@ pub fn run() {
     let input = include_str!("../input/06.txt");
     let parsed = input
         .lines()
-        .map(|l| scanf!(l, "{}, {}", usize, usize).unwrap())
+        .map(|l| sscanf!(l, "{usize}, {usize}").unwrap())
+        .map(|(x, y)| p2(x, y))
         .to_vec();
 
     let count = (0..1000)
@@ -14,7 +15,13 @@ pub fn run() {
         .map(|y| {
             (0..1000)
                 .into_par_iter()
-                .filter(|x| parsed.iter().map(|&p| manhattan((*x, y), p)).sum::<usize>() < 10000)
+                .filter(|x| {
+                    parsed
+                        .iter()
+                        .map(|&p| manhattan(p2(*x, y), p))
+                        .sum::<usize>()
+                        < 10000
+                })
                 .count()
         })
         .sum::<usize>();
@@ -27,7 +34,8 @@ pub fn part_one() {
     let input = include_str!("../input/06.txt");
     let parsed = input
         .lines()
-        .map(|l| scanf!(l, "{}, {}", usize, usize).unwrap())
+        .map(|l| sscanf!(l, "{usize}, {usize}").unwrap())
+        .map(|(x, y)| p2(x, y))
         .to_vec();
 
     fn find_closest(p: Point, points: &[Point]) -> Option<usize> {
@@ -54,13 +62,13 @@ pub fn part_one() {
     let mut counts = vec![0; parsed.len()];
     for y in 1..999 {
         for x in 1..999 {
-            if let Some(c) = find_closest((x, y), &parsed) {
+            if let Some(c) = find_closest(p2(x, y), &parsed) {
                 counts[c] += 1;
             }
         }
     }
     for i in 0..1000 {
-        for p in [(i, 0), (i, 999), (0, i), (999, i)] {
+        for p in [p2(i, 0), p2(i, 999), p2(0, i), p2(999, i)] {
             if let Some(c) = find_closest(p, &parsed) {
                 counts[c] = 0;
             }

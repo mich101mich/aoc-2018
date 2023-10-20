@@ -16,16 +16,13 @@ pub fn run() {
     let input = include_str!("../input/12.txt");
 
     let mut iter = input.lines();
-    let mut state = hashtag_line(
-        iter.next()
-            .and_then(|l| l.strip_prefix("initial state: "))
-            .unwrap(),
-    );
+    let line = iter.next().unwrap();
+    let mut state = sscanf!(line, "initial state: {HashtagLine}").unwrap().0;
     iter.next().unwrap();
 
     let rules = iter
-        .map(|l| scanf!(l, "{} => {}", String, char).unwrap())
-        .map(|(l, r)| (hashtag_line(&l), r == '#'))
+        .map(|l| sscanf!(l, "{HashtagLine} => {char}").unwrap())
+        .map(|(l, r)| (l.0, r == '#'))
         .to_map();
 
     let num_iter = 500;
@@ -68,16 +65,13 @@ pub fn part_one() {
     let input = include_str!("../input/12.txt");
 
     let mut iter = input.lines();
-    let mut state = hashtag_line(
-        iter.next()
-            .and_then(|l| l.strip_prefix("initial state: "))
-            .unwrap(),
-    );
+    let line = iter.next().unwrap();
+    let mut state = sscanf!(line, "initial state: {HashtagLine}").unwrap().0;
     iter.next().unwrap();
 
     let rules = iter
-        .map(|l| scanf!(l, "{} => {}", String, char).unwrap())
-        .map(|(l, r)| (hashtag_line(&l), r == '#'))
+        .map(|l| sscanf!(l, "{HashtagLine} => {char}").unwrap())
+        .map(|(l, r)| (l.0, r == '#'))
         .to_map();
 
     let num_iter = 20;

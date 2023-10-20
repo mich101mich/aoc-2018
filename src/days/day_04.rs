@@ -1,52 +1,23 @@
 use crate::utils::*;
 
+#[derive(FromScanf)]
 enum Action {
+    #[sscanf(format = "Guard #{} begins shift")]
     BeginsShift(usize),
+    #[sscanf(format = "falls asleep")]
     FallsAsleep,
+    #[sscanf(format = "wakes up")]
     WakesUp,
 }
-impl RegexRepresentation for Action {
-    const REGEX: &'static str = r"wakes up|falls asleep|Guard #\d+ begins shift";
-}
-impl std::str::FromStr for Action {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use Action::*;
-        Ok(match s {
-            "wakes up" => WakesUp,
-            "falls asleep" => FallsAsleep,
-            _ => {
-                let id = scanf!(s, "Guard #{} begins shift", usize).unwrap();
-                BeginsShift(id)
-            }
-        })
-    }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, FromScanf)]
+#[sscanf(format = "[{year}-{month}-{day} {hour}:{minute}]")]
 struct TimeStamp {
     year: usize,
     month: u8,
     day: u8,
     hour: u8,
     minute: u8,
-}
-impl sscanf::RegexRepresentation for TimeStamp {
-    const REGEX: &'static str = r"\[\d\d\d\d-\d\d-\d\d \d\d:\d\d\]";
-}
-impl std::str::FromStr for TimeStamp {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (year, month, day, hour, minute) =
-            scanf!(s, "[{}-{}-{} {}:{}]", usize, u8, u8, u8, u8).unwrap();
-        Ok(TimeStamp {
-            year,
-            month,
-            day,
-            hour,
-            minute,
-        })
-    }
 }
 
 #[allow(unused)]
@@ -56,7 +27,7 @@ pub fn run() {
 
     let mut parsed = input
         .lines()
-        .map(|l| scanf!(l, "{} {}", TimeStamp, Action).unwrap())
+        .map(|l| sscanf!(l, "{TimeStamp} {Action}").unwrap())
         .to_vec();
 
     parsed.sort_unstable_by_key(|(ts, _)| *ts);
@@ -104,7 +75,7 @@ pub fn part_one() {
 
     let mut parsed = input
         .lines()
-        .map(|l| scanf!(l, "{} {}", TimeStamp, Action).unwrap())
+        .map(|l| sscanf!(l, "{TimeStamp} {Action}").unwrap())
         .to_vec();
 
     parsed.sort_unstable_by_key(|(ts, _)| *ts);
